@@ -1,0 +1,2 @@
+{"type":"touch","t":5.0,"client":"abc","channel":"voice1_level_adj","value":0.7}
+{"type":"touch","t":5.4,"client":"def","channel":"output_level","value":0.8}

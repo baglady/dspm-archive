@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0",
+  "session_id": "session_example",
+  "t0": 1781753386,
+  "channels": {
+    "output_level": {
+      "min": 0,
+      "max": 1,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "filter_frequency": {
+      "min": 0,
+      "max": 1,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "filter_reso": {
+      "min": 0,
+      "max": 1,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice1_level_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice1_pan_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice2_level_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice2_pan_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice3_level_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice3_pan_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice4_level_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice4_pan_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice5_level_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice5_pan_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice6_level_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    },
+    "voice6_pan_adj": {
+      "min": -2,
+      "max": 2,
+      "taper": "linear",
+      "interp": "linear"
+    }
+  },
+  "logs": {
+    "norns_params": "perflog_example.jsonl",
+    "phone_events": "phone_events.jsonl",
+    "bridge_ticks": "bridge_ticks.jsonl"
+  },
+  "duration_sec": 120.0,
+  "offsets_sec": {
+    "norns": 0.0,
+    "field_recorder": 2.4,
+    "video": -1.1
+  }
+}

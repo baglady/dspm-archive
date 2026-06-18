@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hetti.be/dspm/schema/performance-metadata.schema.json",
+  "title": "DSPM Performance Metadata v1",
+  "description": "Human-entered context for a session bundle, filled in post-show via the backend labeling form. The technical/auto-generated side lives in manifest.json (see session-manifest.schema.json).",
+  "type": "object",
+  "required": ["schema_version", "title", "date", "publish"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Performance title."
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Performance date, ISO 8601 (YYYY-MM-DD)."
+    },
+    "venue": { "type": "string" },
+    "city": { "type": "string" },
+    "performers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "notes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "audience": { "type": "string", "description": "How the crowd interaction went." },
+        "technical": { "type": "string", "description": "Rig notes, what broke, what to change." },
+        "content": { "type": "string", "description": "Musical/aesthetic notes about the set itself." }
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "url"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string" },
+          "url": { "type": "string", "format": "uri" }
+        }
+      }
+    },
+    "publish": {
+      "type": "boolean",
+      "description": "Whether this session is public on hetti.be. Controls what the (future) replay/remix player and any index page surface."
+    }
+  }
+}

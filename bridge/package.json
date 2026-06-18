@@ -1,0 +1,14 @@
+{
+  "name": "dspm-archive-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Many-phones-to-norns aggregation bridge with session-capture logging",
+  "main": "bridge-server.js",
+  "scripts": {
+    "start": "node bridge-server.js"
+  },
+  "dependencies": {
+    "osc-js": "^2.4.0",
+    "ws": "^8.16.0"
+  }
+}

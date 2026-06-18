@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSPM Archive — Session Labeling</title>
+<style>
+  :root {
+    --paper: #f1efe4;
+    --ink: #1a2418;
+    --chartreuse: #c8dc7e;
+    --line: #1a2418;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Bricolage Grotesque", -apple-system, system-ui, sans-serif;
+    padding: 1.5rem; max-width: 760px; margin: 0 auto; font-size: 18px;
+  }
+  h1 { font-size: 1.6rem; letter-spacing: 0.02em; text-transform: uppercase; margin: 0 0 1.2rem; }
+  label { display: block; font-size: 0.95rem; font-weight: 600; margin: 0.9rem 0 0.3rem; }
+  select, input, textarea, button {
+    width: 100%; padding: 0.7rem; border: 2px solid var(--line);
+    background: #fff; color: var(--ink); font: inherit; border-radius: 0;
+  }
+  select, input, textarea { box-shadow: 4px 4px 0 var(--line); }
+  textarea { min-height: 4rem; resize: vertical; }
+  button {
+    background: var(--chartreuse); font-weight: 700; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.04em; margin-top: 1rem;
+    box-shadow: 4px 4px 0 var(--line);
+  }
+  button:active { box-shadow: none; transform: translate(4px, 4px); }
+  button.secondary { background: #fff; }
+  fieldset { border: 2px solid var(--line); margin: 1.2rem 0; padding: 0.6rem 1rem 1rem; }
+  legend { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 0 0.4rem; }
+  .row { display: flex; gap: 1rem; }
+  .row > * { flex: 1; }
+  .check { display: flex; align-items: center; gap: 0.6rem; }
+  .check input { width: auto; box-shadow: none; }
+  #msg { font-weight: 700; min-height: 1.4em; margin-top: 0.8rem; }
+  #msg.ok { color: #2c6e2c; }
+  #msg.err { color: #a02020; }
+  .meta { font-size: 0.85rem; opacity: 0.7; }
+  pre { background: #fff; border: 2px solid var(--line); padding: 0.6rem; overflow-x: auto; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<h1>DSPM Archive — Session Labeling</h1>
+
+<label for="sessionSelect">Session</label>
+<select id="sessionSelect"></select>
+<div id="manifestSummary" class="meta"></div>
+
+<fieldset>
+  <legend>Basics</legend>
+  <label for="title">Title *</label>
+  <input id="title" type="text" placeholder="DSPM @ ...">
+  <div class="row">
+    <div>
+      <label for="date">Date *</label>
+      <input id="date" type="date">
+    </div>
+    <div>
+      <label for="city">City</label>
+      <input id="city" type="text">
+    </div>
+  </div>
+  <label for="venue">Venue</label>
+  <input id="venue" type="text">
+  <label for="performers">Performers (comma-separated)</label>
+  <input id="performers" type="text" placeholder="DSPM, ...">
+</fieldset>
+
+<fieldset>
+  <legend>Notes</legend>
+  <label for="note_audience">Audience / crowd interaction</label>
+  <textarea id="note_audience"></textarea>
+  <label for="note_technical">Technical (rig, what broke)</label>
+  <textarea id="note_technical"></textarea>
+  <label for="note_content">Content (musical / aesthetic)</label>
+  <textarea id="note_content"></textarea>
+</fieldset>
+
+<fieldset>
+  <legend>Publish</legend>
+  <div class="check">
+    <input id="publish" type="checkbox">
+    <label for="publish" style="margin:0;">Public on hetti.be</label>
+  </div>
+</fieldset>
+
+<button id="save">Save metadata</button>
+<div id="msg"></div>
+
+<fieldset>
+  <legend>Supplementary media</legend>
+  <label for="files">Upload audio stems, video, line-level, field recording, stills</label>
+  <input id="files" type="file" multiple>
+  <button id="upload" class="secondary">Upload</button>
+  <div id="mediaList" class="meta"></div>
+</fieldset>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const msg = (text, cls) => { const m = $('msg'); m.textContent = text; m.className = cls || ''; };
+
+async function loadSessions() {
+  const res = await fetch('/api/sessions');
+  const sessions = await res.json();
+  const sel = $('sessionSelect');
+  sel.innerHTML = '';
+  if (sessions.length === 0) {
+    sel.innerHTML = '<option>(no sessions found)</option>';
+    return;
+  }
+  for (const s of sessions) {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.id + (s.title ? ' — ' + s.title : '') + (s.hasMetadata ? ' ✓' : '');
+    sel.appendChild(opt);
+  }
+  loadSession(sessions[0].id);
+}
+
+async function loadSession(id) {
+  const res = await fetch('/api/sessions/' + encodeURIComponent(id));
+  const { manifest, metadata } = await res.json();
+  if (manifest) {
+    const dur = manifest.duration_sec != null ? manifest.duration_sec.toFixed(1) + 's' : '(in progress)';
+    const chans = manifest.channels ? Object.keys(manifest.channels).length : 0;
+    $('manifestSummary').textContent = `t0 ${manifest.t0} · ${dur} · ${chans} channels`;
+  } else {
+    $('manifestSummary').textContent = '(no manifest)';
+  }
+  const m = metadata || {};
+  $('title').value = m.title || '';
+  $('date').value = m.date || '';
+  $('city').value = m.city || '';
+  $('venue').value = m.venue || '';
+  $('performers').value = (m.performers || []).join(', ');
+  $('note_audience').value = (m.notes && m.notes.audience) || '';
+  $('note_technical').value = (m.notes && m.notes.technical) || '';
+  $('note_content').value = (m.notes && m.notes.content) || '';
+  $('publish').checked = !!m.publish;
+  $('mediaList').textContent = (manifest && manifest.media || []).join(', ');
+  msg('');
+}
+
+function collect() {
+  const performers = $('performers').value.split(',').map(s => s.trim()).filter(Boolean);
+  const notes = {};
+  if ($('note_audience').value) notes.audience = $('note_audience').value;
+  if ($('note_technical').value) notes.technical = $('note_technical').value;
+  if ($('note_content').value) notes.content = $('note_content').value;
+  const data = {
+    schema_version: '1.0',
+    title: $('title').value,
+    date: $('date').value,
+    publish: $('publish').checked,
+  };
+  if ($('city').value) data.city = $('city').value;
+  if ($('venue').value) data.venue = $('venue').value;
+  if (performers.length) data.performers = performers;
+  if (Object.keys(notes).length) data.notes = notes;
+  return data;
+}
+
+$('sessionSelect').addEventListener('change', (e) => loadSession(e.target.value));
+
+$('save').addEventListener('click', async () => {
+  const id = $('sessionSelect').value;
+  const res = await fetch('/api/sessions/' + encodeURIComponent(id) + '/metadata', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(collect()),
+  });
+  const out = await res.json();
+  if (out.ok) { msg('Saved.', 'ok'); loadSessions(); }
+  else { msg('Validation failed: ' + JSON.stringify(out.details || out.error), 'err'); }
+});
+
+$('upload').addEventListener('click', async () => {
+  const id = $('sessionSelect').value;
+  const files = $('files').files;
+  if (!files.length) { msg('No files selected.', 'err'); return; }
+  const fd = new FormData();
+  for (const f of files) fd.append('files', f);
+  const res = await fetch('/api/sessions/' + encodeURIComponent(id) + '/media', { method: 'POST', body: fd });
+  const out = await res.json();
+  if (out.ok) { msg('Uploaded ' + files.length + ' file(s).', 'ok'); $('mediaList').textContent = (out.media || []).join(', '); }
+  else { msg('Upload failed.', 'err'); }
+});
+
+loadSessions();
+</script>
+</body>
+</html>

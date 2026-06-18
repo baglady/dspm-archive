@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>DSPM Live</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a2418">
+<style>
+  :root {
+    --paper: #f1efe4;
+    --ink: #1a2418;
+    --chartreuse: #c8dc7e;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink);
+    font-family: "Bricolage Grotesque", -apple-system, system-ui, sans-serif;
+    overscroll-behavior: none; touch-action: none; }
+  header { padding: 0.8rem 1rem; border-bottom: 3px solid var(--ink);
+    display: flex; justify-content: space-between; align-items: center; }
+  h1 { font-size: 1.5rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 0; }
+  #status { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; padding: 0.3rem 0.6rem; border: 2px solid var(--ink); }
+  #status.live { background: var(--chartreuse); }
+  #status.offline { background: #e0a0a0; }
+  .sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .slider { border: 2px solid var(--ink); margin: -1px 0 0 -1px; height: 26vh;
+    position: relative; overflow: hidden; user-select: none; }
+  .slider .fill { position: absolute; bottom: 0; left: 0; right: 0; background: var(--chartreuse); }
+  .slider .lbl { position: absolute; top: 0.4rem; left: 0.5rem; font-size: 0.95rem;
+    font-weight: 700; text-transform: uppercase; pointer-events: none; z-index: 2; }
+  .slider .val { position: absolute; bottom: 0.4rem; right: 0.5rem; font-size: 0.85rem;
+    font-family: "IBM Plex Mono", monospace; pointer-events: none; z-index: 2; }
+  #reset { width: 100%; padding: 1.1rem; font-size: 1.2rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.06em; background: var(--ink); color: var(--paper);
+    border: none; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DSPM Live</h1>
+  <span id="status" class="offline">offline</span>
+</header>
+<div class="sliders" id="sliders"></div>
+<button id="reset">Release all</button>
+
+<script>
+// channel display config -- the Core tier (matches the bridge's CHANNELS).
+// _adj channels are bipolar (center = no offset); others 0..1 from bottom.
+const CHANNELS = [
+  { id: 'output_level',     label: 'Master',  bipolar: false },
+  { id: 'filter_frequency', label: 'Cutoff',  bipolar: false },
+  { id: 'filter_reso',      label: 'Reso',    bipolar: false },
+  { id: 'voice1_level_adj', label: 'V1 Lvl',  bipolar: true },
+  { id: 'voice1_pan_adj',   label: 'V1 Pan',  bipolar: true },
+  { id: 'voice2_level_adj', label: 'V2 Lvl',  bipolar: true },
+  { id: 'voice2_pan_adj',   label: 'V2 Pan',  bipolar: true },
+  { id: 'voice3_level_adj', label: 'V3 Lvl',  bipolar: true },
+  { id: 'voice3_pan_adj',   label: 'V3 Pan',  bipolar: true },
+  { id: 'voice4_level_adj', label: 'V4 Lvl',  bipolar: true },
+  { id: 'voice4_pan_adj',   label: 'V4 Pan',  bipolar: true },
+  { id: 'voice5_level_adj', label: 'V5 Lvl',  bipolar: true },
+  { id: 'voice5_pan_adj',   label: 'V5 Pan',  bipolar: true },
+  { id: 'voice6_level_adj', label: 'V6 Lvl',  bipolar: true },
+  { id: 'voice6_pan_adj',   label: 'V6 Pan',  bipolar: true },
+];
+
+// bridge websocket: same host as the page, port 8081 (served from the bridge
+// host or proxied). Override with ?bridge=host:port if needed.
+const params = new URLSearchParams(location.search);
+const bridgeHost = params.get('bridge') || (location.hostname + ':8081');
+let ws = null;
+
+function connect() {
+  ws = new WebSocket('ws://' + bridgeHost);
+  ws.onopen = () => setStatus(true);
+  ws.onclose = () => { setStatus(false); setTimeout(connect, 1500); };
+  ws.onerror = () => ws.close();
+}
+function setStatus(live) {
+  const s = document.getElementById('status');
+  s.textContent = live ? 'live' : 'offline';
+  s.className = live ? 'live' : 'offline';
+}
+function send(channel, value) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ channel, value }));
+  }
+}
+
+const sliders = document.getElementById('sliders');
+const els = {};
+
+for (const ch of CHANNELS) {
+  const el = document.createElement('div');
+  el.className = 'slider';
+  el.innerHTML = `<div class="fill"></div><div class="lbl">${ch.label}</div><div class="val">—</div>`;
+  sliders.appendChild(el);
+  els[ch.id] = { el, fill: el.querySelector('.fill'), val: el.querySelector('.val'), cfg: ch };
+
+  const setFromY = (clientY) => {
+    const r = el.getBoundingClientRect();
+    let norm = 1 - (clientY - r.top) / r.height; // 0 bottom .. 1 top
+    norm = Math.max(0, Math.min(1, norm));
+    // map to channel range: bipolar -> -2..2, else 0..1
+    const value = ch.bipolar ? (norm * 4 - 2) : norm;
+    els[ch.id].fill.style.height = (norm * 100) + '%';
+    els[ch.id].val.textContent = value.toFixed(2);
+    send(ch.id, value);
+  };
+
+  let active = false;
+  el.addEventListener('touchstart', (e) => { active = true; setFromY(e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+  el.addEventListener('touchmove', (e) => { if (active) setFromY(e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+  el.addEventListener('touchend', () => { active = false; });
+  el.addEventListener('mousedown', (e) => { active = true; setFromY(e.clientY); });
+  window.addEventListener('mousemove', (e) => { if (active) setFromY(e.clientY); });
+  window.addEventListener('mouseup', () => { active = false; });
+}
+
+document.getElementById('reset').addEventListener('click', () => {
+  for (const ch of CHANNELS) {
+    const center = ch.bipolar ? 0.5 : 0;
+    els[ch.id].fill.style.height = (center * 100) + '%';
+    els[ch.id].val.textContent = '—';
+    send(ch.id, ch.bipolar ? 0 : 0);
+  }
+});
+
+connect();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(() => {});
+}
+</script>
+</body>
+</html>

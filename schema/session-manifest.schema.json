@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hetti.be/dspm/schema/session-manifest.schema.json",
+  "title": "DSPM Session Manifest v1",
+  "description": "Auto-generated technical description of a performance session bundle: timing, channels, and log file references. Written by bridge-server.js (manifest stub at session start, duration filled in at session end). Human-entered context lives in performance-metadata.json (see performance-metadata.schema.json), not here.",
+  "type": "object",
+  "required": ["schema_version", "session_id", "t0", "channels", "logs"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "description": "Version of this manifest schema, for future migrations."
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^session_[0-9A-Za-z:.\\-]+$",
+      "description": "Matches the session bundle's directory name, e.g. session_2026-06-18T03-29-46-579Z."
+    },
+    "t0": {
+      "type": "integer",
+      "description": "Unix epoch seconds marking the start of the session -- the zero point all log timestamps (t, in seconds) are relative to."
+    },
+    "duration_sec": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total session duration in seconds. Written when the bridge session ends."
+    },
+    "offsets_sec": {
+      "type": "object",
+      "description": "Per-source time offset (seconds) to align that source's own clock/start-time with t0. A positive value means the source started that many seconds AFTER t0. e.g. {\"norns\": 0.0, \"field_recorder\": 2.4, \"video\": -1.1}.",
+      "additionalProperties": { "type": "number" }
+    },
+    "channels": {
+      "type": "object",
+      "description": "Per-channel metadata for every control exposed to the phone bridge.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["min", "max"],
+        "properties": {
+          "min": { "type": "number" },
+          "max": { "type": "number" },
+          "taper": { "type": "string", "enum": ["linear", "exp"] },
+          "interp": { "type": "string", "enum": ["linear", "step"] },
+          "unit": { "type": "string" }
+        }
+      }
+    },
+    "logs": {
+      "type": "object",
+      "description": "Relative paths (within the bundle) to each layer's JSONL log.",
+      "additionalProperties": { "type": "string" }
+    },
+    "media": {
+      "type": "array",
+      "description": "Supplementary media files uploaded post-show via the backend (audio stems, video, line-level, field recording, stills). Each entry is a relative path within the bundle's media/ directory.",
+      "items": { "type": "string" }
+    }
+  }
+}
