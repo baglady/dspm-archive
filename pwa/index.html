@@ -64,14 +64,31 @@ const CHANNELS = [
   { id: 'voice6_pan_adj',   label: 'V6 Pan',  bipolar: true },
 ];
 
-// bridge websocket: same host as the page, port 8081 (served from the bridge
-// host or proxied). Override with ?bridge=host:port if needed.
+// bridge websocket. Resolution order:
+//   1. ?bridge=... override -- accepts a full ws(s):// URL or a bare host:port.
+//   2. behind a /proxy/<port>/ path proxy (code-server / PikaPods): reuse the
+//      same host+path but swap the port segment to the bridge port.
+//   3. fallback: same hostname, port 8081.
+// Uses wss:// automatically when the page itself is served over https.
 const params = new URLSearchParams(location.search);
-const bridgeHost = params.get('bridge') || (location.hostname + ':8081');
+const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+const BRIDGE_PORT = '8081';
+function resolveBridgeUrl() {
+  const override = params.get('bridge');
+  if (override) {
+    return /^wss?:\/\//.test(override) ? override : proto + override;
+  }
+  if (location.pathname.includes('/proxy/')) {
+    return proto + location.host +
+      location.pathname.replace(/\/proxy\/\d+\/.*/, '/proxy/' + BRIDGE_PORT + '/');
+  }
+  return proto + location.hostname + ':' + BRIDGE_PORT;
+}
+const bridgeUrl = resolveBridgeUrl();
 let ws = null;
 
 function connect() {
-  ws = new WebSocket('ws://' + bridgeHost);
+  ws = new WebSocket(bridgeUrl);
   ws.onopen = () => setStatus(true);
   ws.onclose = () => { setStatus(false); setTimeout(connect, 1500); };
   ws.onerror = () => ws.close();
