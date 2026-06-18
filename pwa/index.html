@@ -3,151 +3,320 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>DSPM Live</title>
+<title>barcode // control</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1a2418">
+<meta name="theme-color" content="#0a0a0c">
 <style>
   :root {
-    --paper: #f1efe4;
-    --ink: #1a2418;
-    --chartreuse: #c8dc7e;
+    --bg: #0a0a0c;
+    --panel: #141418;
+    --line: #2a2a30;
+    --accent: #ff3b30;
+    --accent-dim: #5a1512;
+    --text: #e8e8ec;
+    --text-dim: #8a8a92;
+    --font-display: 'Courier New', monospace;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
+
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink);
-    font-family: "Bricolage Grotesque", -apple-system, system-ui, sans-serif;
-    overscroll-behavior: none; touch-action: none; }
-  header { padding: 0.8rem 1rem; border-bottom: 3px solid var(--ink);
-    display: flex; justify-content: space-between; align-items: center; }
-  h1 { font-size: 1.5rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 0; }
-  #status { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; padding: 0.3rem 0.6rem; border: 2px solid var(--ink); }
-  #status.live { background: var(--chartreuse); }
-  #status.offline { background: #e0a0a0; }
-  .sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-  .slider { border: 2px solid var(--ink); margin: -1px 0 0 -1px; height: 26vh;
-    position: relative; overflow: hidden; user-select: none; }
-  .slider .fill { position: absolute; bottom: 0; left: 0; right: 0; background: var(--chartreuse); }
-  .slider .lbl { position: absolute; top: 0.4rem; left: 0.5rem; font-size: 0.95rem;
-    font-weight: 700; text-transform: uppercase; pointer-events: none; z-index: 2; }
-  .slider .val { position: absolute; bottom: 0.4rem; right: 0.5rem; font-size: 0.85rem;
-    font-family: "IBM Plex Mono", monospace; pointer-events: none; z-index: 2; }
-  #reset { width: 100%; padding: 1.1rem; font-size: 1.2rem; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.06em; background: var(--ink); color: var(--paper);
-    border: none; cursor: pointer; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    user-select: none;
+  }
+
+  header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  header h1 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 0.15em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  header h1 .bars {
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+
+  #status {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--font-display);
+  }
+
+  #status.connected { color: #3ddc84; }
+
+  .connect-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+
+  .connect-text { flex: 1; }
+
+  .connect-label {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+  }
+
+  .connect-url {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    margin-top: 2px;
+    word-break: break-all;
+  }
+
+  .hide-banner-btn {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .connect-banner.hidden { display: none; }
+
+  main {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  section.group {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  section.group h2 {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 0 0 10px 0;
+  }
+
+  /* Buttons */
+  .button-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 8px;
+  }
+
+  .btn {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 16px 8px;
+    border-radius: 6px;
+    text-align: center;
+    transition: background 60ms, border-color 60ms;
+  }
+
+  .btn.active, .btn:active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .btn.momentary:active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Sliders */
+  .slider-block { margin-bottom: 12px; }
+  .slider-block:last-child { margin-bottom: 0; }
+
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .slider-label .val { color: var(--accent); }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 36px;
+    background: transparent;
+    margin: 0;
+  }
+
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 6px;
+    background: var(--line);
+    border-radius: 3px;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #fff;
+    margin-top: -11px;
+  }
+
+  /* XY Pads */
+  .xy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  .xy-pad-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .xy-pad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .xy-pad-header select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 10px;
+    padding: 3px 4px;
+    max-width: 38%;
+  }
+
+  .xy-pad-header select optgroup {
+    background: var(--panel);
+    color: var(--text-dim);
+    font-style: normal;
+  }
+
+  .xy-pad-header select option {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .xy-pad {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background:
+      repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 25%),
+      repeating-linear-gradient(0deg, var(--line) 0 1px, transparent 1px 25%),
+      var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    touch-action: none;
+    overflow: hidden;
+  }
+
+  .xy-pad .crosshair {
+    position: absolute;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #fff;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 0 16px var(--accent);
+    left: 50%;
+    top: 50%;
+  }
+
+  .xy-pad .axis-label {
+    position: absolute;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-dim);
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .axis-label.x-label { bottom: 4px; right: 6px; }
+  .axis-label.y-label { top: 4px; left: 6px; writing-mode: vertical-rl; text-orientation: mixed; }
+
+  footer {
+    text-align: center;
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
 </style>
 </head>
 <body>
+
 <header>
-  <h1>DSPM Live</h1>
-  <span id="status" class="offline">offline</span>
+  <h1><span class="bars">|||</span> BARCODE <span class="bars">|||</span></h1>
+  <div id="status">connecting...</div>
 </header>
-<div class="sliders" id="sliders"></div>
-<button id="reset">Release all</button>
 
+<div id="connect-banner" class="connect-banner">
+  <div class="connect-text">
+    <div class="connect-label">CONNECTED TO</div>
+    <div class="connect-url" id="connect-url">&hellip;</div>
+  </div>
+  <button id="hide-banner" class="hide-banner-btn">&times;</button>
+</div>
+
+<main id="app"></main>
+
+<footer>norns live control · multi-user · dspm-archive</footer>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
 <script>
-// channel display config -- the Core tier (matches the bridge's CHANNELS).
-// _adj channels are bipolar (center = no offset); others 0..1 from bottom.
-const CHANNELS = [
-  { id: 'output_level',     label: 'Master',  bipolar: false },
-  { id: 'filter_frequency', label: 'Cutoff',  bipolar: false },
-  { id: 'filter_reso',      label: 'Reso',    bipolar: false },
-  { id: 'voice1_level_adj', label: 'V1 Lvl',  bipolar: true },
-  { id: 'voice1_pan_adj',   label: 'V1 Pan',  bipolar: true },
-  { id: 'voice2_level_adj', label: 'V2 Lvl',  bipolar: true },
-  { id: 'voice2_pan_adj',   label: 'V2 Pan',  bipolar: true },
-  { id: 'voice3_level_adj', label: 'V3 Lvl',  bipolar: true },
-  { id: 'voice3_pan_adj',   label: 'V3 Pan',  bipolar: true },
-  { id: 'voice4_level_adj', label: 'V4 Lvl',  bipolar: true },
-  { id: 'voice4_pan_adj',   label: 'V4 Pan',  bipolar: true },
-  { id: 'voice5_level_adj', label: 'V5 Lvl',  bipolar: true },
-  { id: 'voice5_pan_adj',   label: 'V5 Pan',  bipolar: true },
-  { id: 'voice6_level_adj', label: 'V6 Lvl',  bipolar: true },
-  { id: 'voice6_pan_adj',   label: 'V6 Pan',  bipolar: true },
-];
-
-// bridge websocket. Resolution order:
-//   1. ?bridge=... override -- accepts a full ws(s):// URL or a bare host:port.
-//   2. behind a /proxy/<port>/ path proxy (code-server / PikaPods): reuse the
-//      same host+path but swap the port segment to the bridge port.
-//   3. fallback: same hostname, port 8081.
-// Uses wss:// automatically when the page itself is served over https.
-const params = new URLSearchParams(location.search);
-const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-const BRIDGE_PORT = '8081';
-function resolveBridgeUrl() {
-  const override = params.get('bridge');
-  if (override) {
-    return /^wss?:\/\//.test(override) ? override : proto + override;
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
   }
-  if (location.pathname.includes('/proxy/')) {
-    return proto + location.host +
-      location.pathname.replace(/\/proxy\/\d+\/.*/, '/proxy/' + BRIDGE_PORT + '/');
-  }
-  return proto + location.hostname + ':' + BRIDGE_PORT;
-}
-const bridgeUrl = resolveBridgeUrl();
-let ws = null;
-
-function connect() {
-  ws = new WebSocket(bridgeUrl);
-  ws.onopen = () => setStatus(true);
-  ws.onclose = () => { setStatus(false); setTimeout(connect, 1500); };
-  ws.onerror = () => ws.close();
-}
-function setStatus(live) {
-  const s = document.getElementById('status');
-  s.textContent = live ? 'live' : 'offline';
-  s.className = live ? 'live' : 'offline';
-}
-function send(channel, value) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ channel, value }));
-  }
-}
-
-const sliders = document.getElementById('sliders');
-const els = {};
-
-for (const ch of CHANNELS) {
-  const el = document.createElement('div');
-  el.className = 'slider';
-  el.innerHTML = `<div class="fill"></div><div class="lbl">${ch.label}</div><div class="val">—</div>`;
-  sliders.appendChild(el);
-  els[ch.id] = { el, fill: el.querySelector('.fill'), val: el.querySelector('.val'), cfg: ch };
-
-  const setFromY = (clientY) => {
-    const r = el.getBoundingClientRect();
-    let norm = 1 - (clientY - r.top) / r.height; // 0 bottom .. 1 top
-    norm = Math.max(0, Math.min(1, norm));
-    // map to channel range: bipolar -> -2..2, else 0..1
-    const value = ch.bipolar ? (norm * 4 - 2) : norm;
-    els[ch.id].fill.style.height = (norm * 100) + '%';
-    els[ch.id].val.textContent = value.toFixed(2);
-    send(ch.id, value);
-  };
-
-  let active = false;
-  el.addEventListener('touchstart', (e) => { active = true; setFromY(e.touches[0].clientY); e.preventDefault(); }, { passive: false });
-  el.addEventListener('touchmove', (e) => { if (active) setFromY(e.touches[0].clientY); e.preventDefault(); }, { passive: false });
-  el.addEventListener('touchend', () => { active = false; });
-  el.addEventListener('mousedown', (e) => { active = true; setFromY(e.clientY); });
-  window.addEventListener('mousemove', (e) => { if (active) setFromY(e.clientY); });
-  window.addEventListener('mouseup', () => { active = false; });
-}
-
-document.getElementById('reset').addEventListener('click', () => {
-  for (const ch of CHANNELS) {
-    const center = ch.bipolar ? 0.5 : 0;
-    els[ch.id].fill.style.height = (center * 100) + '%';
-    els[ch.id].val.textContent = '—';
-    send(ch.id, ch.bipolar ? 0 : 0);
-  }
-});
-
-connect();
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js').catch(() => {});
-}
 </script>
 </body>
 </html>

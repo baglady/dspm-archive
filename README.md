@@ -54,7 +54,11 @@ Each run creates a new `sessions/session_<timestamp>/` with a manifest and the t
 
 ## PWA (audience phones)
 
-Serve `pwa/` over HTTP from the bridge host (or any host phones can reach). Phones open it and tap "Add to Home Screen". It connects to the bridge at `ws://<page-host>:8081` by default; override with `?bridge=host:port`. Reminder for the help page: phones must turn off cellular/mobile data or the local page won't load.
+Serve `pwa/` over HTTP from the bridge host (or any host phones can reach). Phones open it and tap "Add to Home Screen".
+
+The controller is two configurable **XY pads** (each axis' dropdown can target *any* parameter the bridge exposes — every per-voice bias/LFO control, the global levels/filter, and the slews), plus transport buttons (record/clear/reverse/quantize) and level sliders. Edit `pwa/config.js` to change the default targets, pads, buttons, and sliders — no code changes needed.
+
+Connection resolves in this order: `?bridge=` override (a full `ws(s)://` URL or bare `host:port`) → a `/proxy/<port>/` path proxy (code-server / PikaPods — the page swaps the port segment and uses `wss://` automatically over https) → fallback `ws://<page-host>:8081`. Every control travels as `{channel, value}` where `channel` is the OSC path and `value` is normalised 0..1; the bridge averages continuous channels across phones and edge-fires the transport buttons. Reminder for the help page: on the venue LAN, phones must turn off cellular/mobile data or the local page won't load.
 
 ## Backend (session labeling)
 

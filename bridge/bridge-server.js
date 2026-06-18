@@ -26,21 +26,53 @@ const WS_PORT = parseInt(process.env.BRIDGE_WS_PORT || '8081', 10)
 const TICK_MS = parseInt(process.env.BRIDGE_TICK_MS || '40', 10) // ~25Hz
 const SESSIONS_DIR = process.env.SESSIONS_DIR || path.join(__dirname, '..', 'sessions')
 
-// Core tier channels -- master level, the two global filter params, plus
-// level/pan offsets for all 6 voices. Mirrors docs/control-surface-mapping.md.
-// Each entry maps a channel name (sent by phones) to the OSC path it
-// resolves to on norns -- /param/<id> for true params, /barcode/... for the
-// per-voice bias controls that only exist via the osc.event handler.
-const CHANNELS = {
-  output_level:     { osc: '/barcode/output_level' }, // state.level -- no params entry exists for this, see dspm_archive.lua osc.event
-  filter_frequency: { osc: '/param/filter_frequency' },
-  filter_reso:      { osc: '/param/filter_reso' },
+// Full parameter surface. The channel name a phone sends IS the OSC path the
+// bridge forwards to norns, so adding a control here is the only step needed to
+// expose it to the XY-pad UI. dspm_archive.lua's osc.event handler normalises
+// every /barcode/... path from 0..1 internally (util.linlin), so phones always
+// send 0..1 on the wire regardless of the param's real range.
+//
+// Two kinds of channel:
+//   - continuous: averaged across all touching phones on each tick (sliders,
+//     XY pads). Held values re-send at the tick rate, which is what you want
+//     for a control surface.
+//   - discrete: transport actions (record/clear/reverse/quantize). These are
+//     edge-triggered -- forwarded the instant a phone sends one (last-write-
+//     wins across phones) rather than averaged, so a tap isn't smeared into a
+//     fractional value or re-fired every tick. See the "vote" note in
+//     docs/control-surface-mapping.md for a future per-phone-threshold scheme.
+const CHANNELS = {}
+function addChannel(osc, opts = {}) {
+  CHANNELS[osc] = { osc, discrete: !!opts.discrete }
 }
+
+// global continuous
+addChannel('/barcode/output_level') // master (state.level)
+addChannel('/barcode/pre_level')
+addChannel('/barcode/rec_level')
+addChannel('/param/filter_frequency')
+addChannel('/param/filter_reso')
+addChannel('/barcode/rate_slew')
+addChannel('/barcode/pan_slew')
+addChannel('/barcode/level_slew')
+
+// per-voice continuous: bias adjustments + LFO periods (six voices)
+const VOICE_PARAMS = [
+  'level', 'pan', 'rate', 'direction', 'start', 'endpos',
+  'level_lfo', 'pan_lfo', 'rate_lfo', 'direction_lfo', 'startend_lfo',
+]
 for (let i = 1; i <= 6; i++) {
-  CHANNELS[`voice${i}_level_adj`] = { osc: `/barcode/v${i}/level` }
-  CHANNELS[`voice${i}_pan_adj`] = { osc: `/barcode/v${i}/pan` }
+  for (const p of VOICE_PARAMS) addChannel(`/barcode/v${i}/${p}`)
 }
+
+// transport discrete (norns shifts reverse/quantize by +1 itself)
+addChannel('/param/recording', { discrete: true })
+addChannel('/param/clear', { discrete: true })
+addChannel('/param/reverse', { discrete: true })
+addChannel('/param/quantize', { discrete: true })
+
 const CHANNEL_NAMES = Object.keys(CHANNELS)
+const CONTINUOUS_CHANNELS = CHANNEL_NAMES.filter((c) => !CHANNELS[c].discrete)
 
 // ---- session bookkeeping -------------------------------------------------
 
@@ -71,8 +103,15 @@ function writeManifestStub() {
     schema_version: '1.0',
     session_id: sessionId,
     t0: Math.floor(t0 / 1000),
+    // every channel travels the wire normalised 0..1 (norns maps to the real
+    // range); discrete channels carry 0/1 edge values.
     channels: Object.fromEntries(
-      CHANNEL_NAMES.map((name) => [name, { min: name.includes('_adj') ? -2 : 0, max: name.includes('_adj') ? 2 : 1, taper: 'linear', interp: 'linear' }])
+      CHANNEL_NAMES.map((name) => [
+        name,
+        CHANNELS[name].discrete
+          ? { type: 'discrete', min: 0, max: 1 }
+          : { type: 'continuous', min: 0, max: 1, taper: 'linear', interp: 'linear' },
+      ])
     ),
     logs: {
       phone_events: 'phone_events.jsonl',
@@ -125,13 +164,25 @@ wss.on('connection', (ws) => {
     } catch (e) {
       return
     }
-    if (!msg || !CHANNEL_NAMES.includes(msg.channel)) return
+    if (!msg) return
+    const ch = CHANNELS[msg.channel]
+    if (!ch) return
     const value = Number(msg.value)
     if (!Number.isFinite(value)) return
     const ts = tNow()
-    touches[msg.channel].set(clientId, { value, ts })
     if (phoneLog) {
       phoneLog.write(JSON.stringify({ type: 'touch', t: ts, client: clientId, channel: msg.channel, value }) + '\n')
+    }
+    if (ch.discrete) {
+      // edge event: forward immediately (last-write-wins across phones) and log
+      // it on the tick stream too, so the archive keeps the transport actions.
+      const out = Math.round(value)
+      osc.send(new OSC.Message(ch.osc, out))
+      if (tickLog) {
+        tickLog.write(JSON.stringify({ type: 'event', t: ts, channel: msg.channel, value: out }) + '\n')
+      }
+    } else {
+      touches[msg.channel].set(clientId, { value, ts })
     }
   })
 
@@ -145,7 +196,7 @@ wss.on('connection', (ws) => {
 setInterval(() => {
   if (!sessionDir) return
   const tick = { type: 'tick', t: tNow(), values: {} }
-  for (const channel of CHANNEL_NAMES) {
+  for (const channel of CONTINUOUS_CHANNELS) {
     const active = [...touches[channel].values()]
     if (active.length === 0) continue
     // mean aggregation across all phones currently touching this channel;
@@ -174,4 +225,4 @@ process.on('SIGTERM', () => {
 })
 
 console.log(`[bridge] websocket on :${WS_PORT}, OSC -> ${NORNS_HOST}:${NORNS_PORT}, tick ${TICK_MS}ms`)
-console.log(`[bridge] channels: ${CHANNEL_NAMES.join(', ')}`)
+console.log(`[bridge] ${CHANNEL_NAMES.length} channels (${CONTINUOUS_CHANNELS.length} continuous, ${CHANNEL_NAMES.length - CONTINUOUS_CHANNELS.length} discrete)`)
