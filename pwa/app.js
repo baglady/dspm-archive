@@ -303,6 +303,21 @@ function renderXYPads(section) {
     pad.addEventListener("pointerup", () => { dragging = false; });
     pad.addEventListener("pointercancel", () => { dragging = false; });
 
+    // feedback: if norns reports a new value for whatever this pad's X or Y is
+    // currently pointed at, move the crosshair to match (UI only, no send).
+    wsListeners.push((path, args) => {
+      if (dragging) return; // don't fight the finger while it's on the pad
+      const v = Number(args && args[0]);
+      if (!Number.isFinite(v)) return;
+      const clamped = Math.max(0, Math.min(1, v));
+      if (flat[parseInt(xSelect.value)].paths.includes(path)) {
+        crosshair.style.left = (clamped * 100) + "%";
+      }
+      if (flat[parseInt(ySelect.value)].paths.includes(path)) {
+        crosshair.style.top = ((1 - clamped) * 100) + "%"; // Y inverted: top = 1
+      }
+    });
+
     wrap.appendChild(header);
     wrap.appendChild(pad);
     grid.appendChild(wrap);

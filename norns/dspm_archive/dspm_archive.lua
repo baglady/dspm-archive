@@ -31,6 +31,7 @@
 
 local Formatters=require 'formatters'
 local logger=include("dspm_archive/lib/perf_logger")
+local feedback=include("dspm_archive/lib/feedback")
 
 -----------------------
 
@@ -212,6 +213,8 @@ end
 --      logging hook below) entirely.
 osc.event = function(path, args, from)
   local v = args[1]
+  feedback.set_bridge(from) -- learn where to send norns->phones feedback
+  feedback.start({state=state, voice=voice}) -- begins polling on first contact (idempotent)
 
   local param_id = string.match(path, "^/param/(.+)$")
   if param_id ~= nil then
