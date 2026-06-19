@@ -396,6 +396,12 @@ wss.on('connection', (ws) => {
       }
     } else {
       touches[msg.channel].set(clientId, { value, ts })
+      // fan out to other phones immediately so all UIs stay in sync
+      for (const client of wss.clients) {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ path: msg.channel, args: [value] }))
+        }
+      }
     }
   })
 

@@ -344,6 +344,124 @@
     color: var(--text-dim);
     max-width: 80px;
   }
+
+  .page-nav {
+    display: flex;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+
+  .page-nav a, .page-nav span {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 9px 16px;
+    text-decoration: none;
+    color: var(--text-dim);
+  }
+
+  .page-nav a:hover { color: var(--text); }
+  .page-nav .current { color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+  /* Gyro tilt section */
+  .gyro-enable-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .gyro-enable-btn {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .gyro-enable-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .gyro-status-txt {
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .gyro-axis-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .gyro-axis-row:last-child { margin-bottom: 0; }
+
+  .gyro-axis-label {
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    flex: 0 0 38px;
+  }
+
+  .gyro-axis-select {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 10px;
+    padding: 4px 4px;
+    max-width: 50%;
+  }
+
+  .gyro-axis-select optgroup { background: var(--panel); color: var(--text-dim); font-style: normal; }
+  .gyro-axis-select option   { background: var(--bg);    color: var(--text); }
+
+  .gyro-track {
+    flex: 1;
+    position: relative;
+    height: 6px;
+    background: var(--line);
+    border-radius: 3px;
+  }
+
+  .gyro-center-mark {
+    position: absolute;
+    left: 50%;
+    top: -4px;
+    width: 1px;
+    height: 14px;
+    background: var(--text-dim);
+    transform: translateX(-50%);
+  }
+
+  .gyro-dot {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #fff;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 0 8px var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -352,6 +470,11 @@
   <h1><span class="bars">|||</span> BARCODE <span class="bars">|||</span></h1>
   <div id="status">connecting...</div>
 </header>
+
+<nav class="page-nav" id="page-nav" style="display:none">
+  <span class="current">AUDIENCE</span>
+  <a id="nav-performer" href="performer.html">PERFORMER →</a>
+</nav>
 
 <div id="connect-banner" class="connect-banner">
   <div class="connect-text">

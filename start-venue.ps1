@@ -16,7 +16,8 @@
 param(
   [Parameter(Mandatory = $true)][string]$NornsHost,
   [int]$Port = 8081,
-  [int]$NornsPort = 10111
+  [int]$NornsPort = 10111,
+  [string]$AdminToken = "dspm"
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,17 +39,24 @@ if (-not (Test-Path (Join-Path $bridgeDir "node_modules"))) {
 
 Write-Host ""
 Write-Host "Audience opens ONE of these on the same WiFi:" -ForegroundColor Green
-Get-NetIPAddress -AddressFamily IPv4 |
-  Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" } |
-  ForEach-Object { Write-Host ("    http://{0}:{1}/" -f $_.IPAddress, $Port) -ForegroundColor Green }
+$ips = @(Get-NetIPAddress -AddressFamily IPv4 |
+  Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" })
+$ips | ForEach-Object { Write-Host ("    http://{0}:{1}/" -f $_.IPAddress, $Port) -ForegroundColor Green }
 Write-Host ""
+if ($ips.Count -gt 0) {
+  $ip = $ips[0].IPAddress
+  Write-Host "Performer page (full norns control):" -ForegroundColor Yellow
+  Write-Host ("    http://{0}:{1}/performer.html?token={2}" -f $ip, $Port, $AdminToken) -ForegroundColor Yellow
+  Write-Host ""
+}
 Write-Host ("Forwarding OSC to norns at {0}:{1}" -f $NornsHost, $NornsPort) -ForegroundColor Cyan
 Write-Host "Ctrl-C stops the bridge and finalizes the session log." -ForegroundColor DarkGray
 Write-Host ""
 
-$env:NORNS_HOST = $NornsHost
-$env:NORNS_PORT = "$NornsPort"
-$env:BRIDGE_WS_PORT = "$Port"
+$env:NORNS_HOST          = $NornsHost
+$env:NORNS_PORT          = "$NornsPort"
+$env:BRIDGE_WS_PORT      = "$Port"
+$env:BRIDGE_ADMIN_TOKEN  = $AdminToken
 
 Push-Location $bridgeDir
 try {

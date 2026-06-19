@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>barcode // performer</title>
+<meta name="theme-color" content="#0a0a0c">
+<style>
+:root {
+  --bg:         #0a0a0c;
+  --panel:      #141418;
+  --line:       #2a2a30;
+  --accent:     #ff3b30;
+  --accent-dim: #5a1512;
+  --text:       #e8e8ec;
+  --text-dim:   #8a8a92;
+  --green:      #3ddc84;
+  --green-dim:  #0d2b1a;
+  --fd: 'Courier New', monospace;
+  --fb: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--fb);
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+header {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 16px 10px;
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+
+header h1 {
+  font-family: var(--fd);
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+header h1 .bars { color: var(--accent); }
+
+#status {
+  font-family: var(--fd);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+#status.connected { color: var(--green); }
+
+main {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.sec {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.sec h2 {
+  font-family: var(--fd);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 10px;
+}
+
+/* Crowd */
+.crowd-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.crowd-btn {
+  font-family: var(--fd);
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 16px 24px;
+  border-radius: 8px;
+  background: var(--green-dim);
+  border: 2px solid var(--green);
+  color: #c8ffd8;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 80ms, border-color 80ms, color 80ms;
+}
+
+.crowd-btn.muted {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.crowd-gain-wrap { flex: 1; min-width: 140px; }
+
+.crowd-state {
+  font-family: var(--fd);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  margin-top: 6px;
+}
+
+/* Buttons */
+.btn-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  gap: 8px;
+}
+
+.btn {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family: var(--fd);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 15px 6px;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 60ms, border-color 60ms;
+}
+
+.btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn.momentary:active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Sliders */
+.slider-block { margin-bottom: 10px; }
+.slider-block:last-child { margin-bottom: 0; }
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--fd);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+
+.slider-label .val { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 30px;
+  background: transparent;
+  margin: 0;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  height: 5px;
+  background: var(--line);
+  border-radius: 3px;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  margin-top: -9px;
+}
+
+/* Voice tabs */
+.tab-strip {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 12px;
+  position: sticky;
+  top: 52px; /* below sticky header */
+  z-index: 10;
+  background: var(--panel);
+  padding: 4px 0;
+  margin-left: -12px;
+  margin-right: -12px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.tab {
+  flex: 1;
+  font-family: var(--fd);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 9px 4px;
+  border-radius: 5px;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 60ms, border-color 60ms, color 60ms;
+}
+
+.tab.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.voice-panel { display: none; }
+.voice-panel.active { display: block; }
+
+.sub-label {
+  font-family: var(--fd);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+  margin: 12px 0 8px;
+}
+
+.sub-label:first-child { margin-top: 0; }
+
+footer {
+  text-align: center;
+  padding: 16px;
+  font-family: var(--fd);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+.page-nav {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.page-nav a, .page-nav span {
+  font-family: var(--fd);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 9px 16px;
+  text-decoration: none;
+  color: var(--text-dim);
+}
+
+.page-nav a:hover { color: var(--text); }
+.page-nav .current { color: var(--accent); border-bottom: 2px solid var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="bars">|||</span> BARCODE <span class="bars">|||</span> PERFORMER</h1>
+  <div id="status">connecting…</div>
+</header>
+
+<nav class="page-nav">
+  <a id="nav-audience" href="index.html">← AUDIENCE</a>
+  <span class="current">PERFORMER</span>
+</nav>
+
+<main id="app"></main>
+
+<footer>norns performer control · dspm-archive · <span id="bridge-url"></span></footer>
+
+<script>
+// ============================================================
+// BRIDGE CONNECTION
+// Same URL resolution logic as app.js — works on venue LAN,
+// via proxy (PikaPods), and via Cloudflare tunnel.
+// ============================================================
+const qp    = new URLSearchParams(location.search);
+const proto = location.protocol === "https:" ? "wss://" : "ws://";
+const BRIDGE_PORT = "8081";
+
+function resolveBridgeUrl() {
+  const ov = qp.get("bridge");
+  if (ov) return /^wss?:\/\//.test(ov) ? ov : proto + ov;
+  if (location.pathname.includes("/proxy/")) {
+    return proto + location.host +
+      location.pathname.replace(/\/proxy\/\d+\/.*/, "/proxy/" + BRIDGE_PORT + "/");
+  }
+  return proto + location.hostname + ":" + BRIDGE_PORT;
+}
+const bridgeUrl = resolveBridgeUrl();
+document.getElementById("bridge-url").textContent = bridgeUrl.replace(/^wss?:\/\//, "");
+document.getElementById("nav-audience").href = "index.html" + location.search;
+
+const statusEl = document.getElementById("status");
+const wsListeners = [];
+let ws = null;
+
+function sendOSC(path, args) {
+  const value = Array.isArray(args) ? Number(args[0]) : Number(args);
+  if (ws && ws.readyState === WebSocket.OPEN)
+    ws.send(JSON.stringify({ channel: path, value }));
+}
+
+function connectWS() {
+  try { ws = new WebSocket(bridgeUrl); }
+  catch (e) { statusEl.textContent = "no bridge"; return; }
+  ws.onopen  = () => { statusEl.textContent = "connected"; statusEl.classList.add("connected"); };
+  ws.onclose = () => { statusEl.textContent = "reconnecting…"; statusEl.classList.remove("connected"); setTimeout(connectWS, 1500); };
+  ws.onerror = () => {};
+  ws.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg && msg.type === "hello") return;
+      if (msg && msg.path) for (const fn of wsListeners) fn(msg.path, msg.args);
+    } catch (e) {}
+  };
+}
+connectWS();
+
+// ============================================================
+// HELPERS
+// ============================================================
+function el(tag, cls, children) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (children) for (const c of children) {
+    if (typeof c === "string") e.appendChild(document.createTextNode(c));
+    else if (c) e.appendChild(c);
+  }
+  return e;
+}
+
+function makeSlider(label, path, defaultVal, fmtFn) {
+  const fmt = fmtFn || ((v) => Number(v).toFixed(2));
+  const block = el("div", "slider-block");
+  const row = el("div", "slider-label");
+  const valEl = el("span", "val", [fmt(defaultVal)]);
+  row.appendChild(el("span", null, [label]));
+  row.appendChild(valEl);
+
+  const inp = document.createElement("input");
+  inp.type = "range"; inp.min = "0"; inp.max = "1"; inp.step = "0.001";
+  inp.value = String(defaultVal);
+
+  inp.addEventListener("input", () => {
+    valEl.textContent = fmt(inp.value);
+    sendOSC(path, [parseFloat(inp.value)]);
+  });
+
+  wsListeners.push((p, args) => {
+    if (p === path && args != null) {
+      inp.value = String(args[0]);
+      valEl.textContent = fmt(args[0]);
+    }
+  });
+
+  block.appendChild(row);
+  block.appendChild(inp);
+  return block;
+}
+
+function makeToggle(label, path) {
+  let active = false;
+  const btn = el("div", "btn", [label]);
+  btn.addEventListener("click", () => {
+    active = !active;
+    btn.classList.toggle("active", active);
+    sendOSC(path, [active ? 1 : 0]);
+  });
+  wsListeners.push((p, args) => {
+    if (p === path && args != null) {
+      active = Number(args[0]) > 0.5;
+      btn.classList.toggle("active", active);
+    }
+  });
+  return btn;
+}
+
+function makeMomentary(label, path) {
+  const btn = el("div", "btn momentary", [label]);
+  const press   = (e) => { e.preventDefault(); sendOSC(path, [1]); };
+  const release = (e) => { e.preventDefault(); sendOSC(path, [0]); };
+  btn.addEventListener("pointerdown", press);
+  btn.addEventListener("pointerup",   release);
+  btn.addEventListener("pointercancel", release);
+  btn.addEventListener("pointerleave", release);
+  return btn;
+}
+
+// ============================================================
+// CROWD CONTROL
+// Token from ?token=... or ?admin=... (backward compat with admin bar).
+// Accesses the same /admin/crowd endpoint as the corner bar on the
+// main audience page.
+// ============================================================
+function buildCrowd() {
+  const token    = qp.get("token") || qp.get("admin") || "";
+  const adminBase = bridgeUrl.replace(/^ws/, "http").replace(/\/+$/, "") + "/admin/crowd";
+
+  function adminFetch(setObj) {
+    const sp = new URLSearchParams();
+    if (setObj) for (const k in setObj) sp.set(k, setObj[k]);
+    if (token) sp.set("token", token);
+    const qs = sp.toString();
+    return fetch(adminBase + (qs ? "?" + qs : ""), { method: "POST" })
+      .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+  }
+
+  const sec = el("div", "sec");
+  sec.appendChild(el("h2", null, ["CROWD CONTROL"]));
+
+  const row = el("div", "crowd-row");
+
+  const crowdBtn = el("div", "crowd-btn", ["LIVE"]);
+  let crowdEnabled = true;
+
+  const gainWrap  = el("div", "crowd-gain-wrap");
+  const gainLabel = el("div", "slider-label");
+  gainLabel.appendChild(el("span", null, ["CROWD GAIN"]));
+  const gainValEl = el("span", "val", ["100%"]);
+  gainLabel.appendChild(gainValEl);
+  const gainInp = document.createElement("input");
+  gainInp.type = "range"; gainInp.min = "0"; gainInp.max = "1";
+  gainInp.step = "0.01"; gainInp.value = "1";
+  gainWrap.appendChild(gainLabel);
+  gainWrap.appendChild(gainInp);
+
+  const stateEl = el("div", "crowd-state", ["fetching state…"]);
+
+  function applyState(s) {
+    crowdEnabled = !!s.enabled;
+    crowdBtn.textContent = crowdEnabled ? "LIVE" : "MUTED";
+    crowdBtn.classList.toggle("muted", !crowdEnabled);
+    if (typeof s.gain === "number") {
+      gainInp.value = String(s.gain);
+      gainValEl.textContent = Math.round(s.gain * 100) + "%";
+    }
+    stateEl.textContent = crowdEnabled ? "crowd → norns" : "crowd muted";
+  }
+
+  crowdBtn.addEventListener("click", () => {
+    adminFetch({ enabled: crowdEnabled ? 0 : 1 })
+      .then(applyState)
+      .catch((e) => { stateEl.textContent = "error: " + e.message; });
+  });
+
+  gainInp.addEventListener("input", () => {
+    gainValEl.textContent = Math.round(parseFloat(gainInp.value) * 100) + "%";
+  });
+  gainInp.addEventListener("change", () => {
+    adminFetch({ gain: gainInp.value })
+      .then(applyState)
+      .catch((e) => { stateEl.textContent = "error: " + e.message; });
+  });
+
+  row.appendChild(crowdBtn);
+  row.appendChild(gainWrap);
+  sec.appendChild(row);
+  sec.appendChild(stateEl);
+
+  adminFetch()
+    .then(applyState)
+    .catch(() => { stateEl.textContent = "crowd api unavailable (loopback only without token)"; });
+
+  return sec;
+}
+
+// ============================================================
+// TRANSPORT
+// ============================================================
+function buildTransport() {
+  const sec = el("div", "sec");
+  sec.appendChild(el("h2", null, ["TRANSPORT"]));
+  const row = el("div", "btn-row");
+  row.appendChild(makeToggle("REC",      "/param/recording"));
+  row.appendChild(makeMomentary("CLEAR", "/param/clear"));
+  row.appendChild(makeToggle("REVERSE",  "/param/reverse"));
+  row.appendChild(makeToggle("LFO SYNC", "/param/quantize"));
+  sec.appendChild(row);
+  return sec;
+}
+
+// ============================================================
+// GLOBAL CONTROLS
+// ============================================================
+function buildGlobal() {
+  const sec = el("div", "sec");
+  sec.appendChild(el("h2", null, ["GLOBAL"]));
+
+  const pct   = (v) => Math.round(Number(v) * 100) + "%";
+  // filter_frequency: norns maps 0..1 → 20..20000 Hz exponentially.
+  // We show the normalized value since we can't easily invert exp in JS.
+  const norm3 = (v) => Number(v).toFixed(3);
+
+  sec.appendChild(makeSlider("MASTER OUTPUT",  "/barcode/output_level",    0.8,  pct));
+  sec.appendChild(makeSlider("PRE LEVEL",      "/barcode/pre_level",       1.0,  pct));
+  sec.appendChild(makeSlider("REC LEVEL",      "/barcode/rec_level",       1.0,  pct));
+  sec.appendChild(makeSlider("FILTER CUTOFF",  "/param/filter_frequency",  1.0,  norm3));
+  sec.appendChild(makeSlider("RESONANCE",      "/param/filter_reso",       0.25, norm3));
+
+  return sec;
+}
+
+// ============================================================
+// SLEW TIMES
+// norns maps 0..1 → 0..30s via linlin, so we can show real seconds.
+// ============================================================
+function buildSlew() {
+  const sec = el("div", "sec");
+  sec.appendChild(el("h2", null, ["SLEW TIMES"]));
+  const slewFmt = (v) => (Number(v) * 30).toFixed(1) + "s";
+  const slewDef = 1 / 30; // norns default = 1 s
+
+  sec.appendChild(makeSlider("RATE SLEW",  "/barcode/rate_slew",  slewDef, slewFmt));
+  sec.appendChild(makeSlider("PAN SLEW",   "/barcode/pan_slew",   slewDef, slewFmt));
+  sec.appendChild(makeSlider("LEVEL SLEW", "/barcode/level_slew", slewDef, slewFmt));
+
+  return sec;
+}
+
+// ============================================================
+// VOICES  (V1 – V6, tabbed)
+// Each tab has two sub-groups:
+//   BIAS      — level/pan/rate/direction/start/end adjustments
+//   LFO PERIOD — period in seconds for each LFO
+//
+// Norns mappings (all normalized 0..1 input):
+//   level/pan/direction adj : linlin(0,1, -2, 2, v)    → show ±2
+//   rate adj               : linlin(0,1, -6, 6, v)    → show ±6
+//   start/end adj          : buffer-size-dependent, show normalized
+//   lfo periods            : linlin(0,1,  1,50, v)    → show 1..50 s
+// ============================================================
+function buildVoices() {
+  const sec = el("div", "sec");
+  sec.appendChild(el("h2", null, ["VOICES"]));
+
+  const tabStrip = el("div", "tab-strip");
+  sec.appendChild(tabStrip);
+
+  const tabs = [], panels = [];
+
+  const biasFmt = (v) => (Number(v) * 4 - 2).toFixed(2);
+  const rateFmt = (v) => (Number(v) * 12 - 6).toFixed(1);
+  const lfoFmt  = (v) => (Number(v) * 49 + 1).toFixed(1) + "s";
+  const norm2   = (v) => Number(v).toFixed(2);
+
+  for (let i = 1; i <= 6; i++) {
+    const vIdx  = i - 1;
+    const tab   = el("div", "tab" + (vIdx === 0 ? " active" : ""), ["V" + i]);
+    const panel = el("div", "voice-panel" + (vIdx === 0 ? " active" : ""));
+
+    tabStrip.appendChild(tab);
+    sec.appendChild(panel);
+    tabs.push(tab);
+    panels.push(panel);
+
+    // BIAS
+    panel.appendChild(el("div", "sub-label", ["BIAS"]));
+    panel.appendChild(makeSlider("LEVEL",     `/barcode/v${i}/level`,     0.5, biasFmt));
+    panel.appendChild(makeSlider("PAN",       `/barcode/v${i}/pan`,       0.5, biasFmt));
+    panel.appendChild(makeSlider("RATE",      `/barcode/v${i}/rate`,      0.5, rateFmt));
+    panel.appendChild(makeSlider("DIRECTION", `/barcode/v${i}/direction`, 0.5, biasFmt));
+    panel.appendChild(makeSlider("START",     `/barcode/v${i}/start`,     0.5, norm2));
+    panel.appendChild(makeSlider("END",       `/barcode/v${i}/endpos`,    0.5, norm2));
+
+    // LFO PERIODS
+    panel.appendChild(el("div", "sub-label", ["LFO PERIOD"]));
+    panel.appendChild(makeSlider("LVL LFO",  `/barcode/v${i}/level_lfo`,     0.5, lfoFmt));
+    panel.appendChild(makeSlider("PAN LFO",  `/barcode/v${i}/pan_lfo`,       0.5, lfoFmt));
+    panel.appendChild(makeSlider("RATE LFO", `/barcode/v${i}/rate_lfo`,      0.5, lfoFmt));
+    panel.appendChild(makeSlider("DIR LFO",  `/barcode/v${i}/direction_lfo`, 0.5, lfoFmt));
+    panel.appendChild(makeSlider("S/E LFO",  `/barcode/v${i}/startend_lfo`,  0.5, lfoFmt));
+
+    tab.addEventListener("click", () => {
+      tabs.forEach((t, idx) => t.classList.toggle("active", idx === vIdx));
+      panels.forEach((p, idx) => p.classList.toggle("active", idx === vIdx));
+    });
+  }
+
+  return sec;
+}
+
+// ============================================================
+// BUILD
+// ============================================================
+const app = document.getElementById("app");
+app.appendChild(buildCrowd());
+app.appendChild(buildTransport());
+app.appendChild(buildGlobal());
+app.appendChild(buildSlew());
+app.appendChild(buildVoices());
+</script>
+</body>
+</html>

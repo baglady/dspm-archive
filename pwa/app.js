@@ -14,6 +14,17 @@
 const app = document.getElementById("app");
 const statusEl = document.getElementById("status");
 
+// ---- page nav: show PERFORMER link only when ?admin or ?token is present ----
+{
+  const _p = new URLSearchParams(location.search);
+  const nav = document.getElementById("page-nav");
+  const navLink = document.getElementById("nav-performer");
+  if (nav && navLink && (_p.has("admin") || _p.has("token"))) {
+    navLink.href = "performer.html" + location.search;
+    nav.style.display = "";
+  }
+}
+
 // ---- connect banner: show actual URL, allow dismiss -------------------
 {
   const urlEl = document.getElementById("connect-url");
@@ -230,7 +241,7 @@ function renderXYPads(section) {
     const header = el("div", "xy-pad-header");
     header.appendChild(el("span", null, [item.label]));
 
-    function buildSelect(prefix, defaultIndex) {
+    const buildSelect = (prefix, defaultIndex) => {
       const select = document.createElement("select");
       let flatIdx = 0;
       for (const grp of item.axisGroups) {
@@ -328,14 +339,184 @@ function renderXYPads(section) {
 }
 
 // ============================================================
+// GYRO TILT
+// ============================================================
+function buildGyroSelect(defaultIndex) {
+  const select = document.createElement("select");
+  select.className = "gyro-axis-select";
+  let flatIdx = 0;
+  for (const grp of ALL_AXIS_GROUPS) {
+    const og = document.createElement("optgroup");
+    og.label = grp.group;
+    for (const opt of grp.options) {
+      const o = document.createElement("option");
+      o.value = String(flatIdx++);
+      o.textContent = opt.label;
+      og.appendChild(o);
+    }
+    select.appendChild(og);
+  }
+  select.value = String(defaultIndex);
+  return select;
+}
+
+function renderGyro(cfg) {
+  if (!cfg) return null;
+
+  const dead = cfg.deadzoneDeg ?? 8;
+  const intervalMs = Math.round(1000 / (cfg.rateHz ?? 15));
+
+  const flat = [];
+  for (const grp of ALL_AXIS_GROUPS) {
+    for (const opt of grp.options) flat.push({ ...opt });
+  }
+  const findIdx = (path) =>
+    Math.max(0, flat.findIndex((o) => o.paths && o.paths.includes(path)));
+
+  const group = el("section", "group");
+  group.appendChild(el("h2", null, ["GYRO TILT"]));
+
+  const enableRow = el("div", "gyro-enable-row");
+  const enableBtn = el("div", "gyro-enable-btn", ["ENABLE GYRO"]);
+  const statusTxt = el("span", "gyro-status-txt", ["tap to activate · tilt controls selected param"]);
+  enableRow.appendChild(enableBtn);
+  enableRow.appendChild(statusTxt);
+  group.appendChild(enableRow);
+
+  function makeAxisRow(axisLabel, defaultPath) {
+    const row = el("div", "gyro-axis-row");
+    row.appendChild(el("span", "gyro-axis-label", [axisLabel]));
+    const select = buildGyroSelect(findIdx(defaultPath));
+    const track = el("div", "gyro-track");
+    track.appendChild(el("div", "gyro-center-mark"));
+    const dot = el("div", "gyro-dot");
+    track.appendChild(dot);
+    row.appendChild(select);
+    row.appendChild(track);
+    return { row, select, dot };
+  }
+
+  const betaAxis  = makeAxisRow("PITCH", cfg.betaDefaultPath  || "");
+  const gammaAxis = makeAxisRow("ROLL",  cfg.gammaDefaultPath || "");
+  group.appendChild(betaAxis.row);
+  group.appendChild(gammaAxis.row);
+
+  let enabled = false, timerId = null;
+  let betaNorm = 0.5, gammaNorm = 0.5;
+
+  function normTilt(deg, maxDeg) {
+    const raw = deg ?? 0;
+    const abs = Math.abs(raw);
+    if (abs < dead) return 0.5;
+    const sign = raw >= 0 ? 1 : -1;
+    return 0.5 + sign * Math.min(1, (abs - dead) / (maxDeg - dead)) * 0.5;
+  }
+
+  function startGyro() {
+    let gotRealData = false;
+    let hasOrientation = false;
+
+    function updateDots(beta, gamma) {
+      if (beta == null && gamma == null) return;
+      gotRealData = true;
+      betaNorm  = normTilt(beta,  90);
+      gammaNorm = normTilt(gamma, 90);
+      betaAxis.dot.style.left  = (betaNorm  * 100) + "%";
+      gammaAxis.dot.style.left = (gammaNorm * 100) + "%";
+      const b = beta  != null ? beta.toFixed(1)  + "°" : "–";
+      const g = gamma != null ? gamma.toFixed(1) + "°" : "–";
+      statusTxt.textContent = "β " + b + "  γ " + g;
+    }
+
+    // Primary: DeviceOrientationEvent — direct tilt angles, preferred when available.
+    function orientHandler(e) {
+      hasOrientation = true;
+      updateDots(e.beta, e.gamma);
+    }
+
+    // Fallback: DeviceMotionEvent — derives pitch/roll from the gravity vector.
+    // Fires on accelerometer-only devices (Fire 7, Fire HD 8, no-gyro Androids)
+    // where deviceorientation never fires. Uses atan2 on accelerationIncludingGravity.
+    function motionHandler(e) {
+      if (hasOrientation) return;
+      const ag = e.accelerationIncludingGravity;
+      if (!ag || ag.x === null) return;
+      const ax = ag.x || 0, ay = ag.y || 0, az = ag.z || 0;
+      const beta  = -Math.atan2(ay, Math.sqrt(ax * ax + az * az)) * (180 / Math.PI);
+      const gamma =  Math.atan2(ax, az) * (180 / Math.PI);
+      updateDots(beta, gamma);
+    }
+
+    betaAxis._handlers = [
+      ["deviceorientation", orientHandler],
+      ["devicemotion",      motionHandler],
+    ];
+    for (const [evt, fn] of betaAxis._handlers) window.addEventListener(evt, fn);
+
+    timerId = setInterval(() => {
+      const bOpt = flat[parseInt(betaAxis.select.value)];
+      const gOpt = flat[parseInt(gammaAxis.select.value)];
+      if (bOpt) for (const p of bOpt.paths) sendOSC(p, [betaNorm]);
+      if (gOpt) for (const p of gOpt.paths) sendOSC(p, [gammaNorm]);
+    }, intervalMs);
+
+    setTimeout(() => {
+      if (enabled && !gotRealData)
+        statusTxt.textContent = "no sensor data — check Sensors Permission in OS settings";
+    }, 3000);
+
+    enabled = true;
+    enableBtn.classList.add("active");
+    enableBtn.textContent = "GYRO ON";
+    statusTxt.textContent = "waiting for first event…";
+  }
+
+  function stopGyro() {
+    if (betaAxis._handlers) {
+      for (const [evt, fn] of betaAxis._handlers) window.removeEventListener(evt, fn);
+      betaAxis._handlers = null;
+    }
+    clearInterval(timerId);
+    timerId = null;
+    enabled = false;
+    enableBtn.classList.remove("active");
+    enableBtn.textContent = "ENABLE GYRO";
+    statusTxt.textContent = "off";
+    betaAxis.dot.style.left  = "50%";
+    gammaAxis.dot.style.left = "50%";
+  }
+
+  enableBtn.addEventListener("click", () => {
+    if (enabled) { stopGyro(); return; }
+    // iOS 13+ requires explicit permission from a user gesture
+    const needsPerm = typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function";
+    if (needsPerm) {
+      DeviceOrientationEvent.requestPermission()
+        .then((s) => {
+          if (s === "granted") startGyro();
+          else statusTxt.textContent = "permission denied by iOS";
+        })
+        .catch(() => { statusTxt.textContent = "permission error"; });
+    } else {
+      startGyro();
+    }
+  });
+
+  return group;
+}
+
+// ============================================================
 // RENDER ALL
 // ============================================================
-const btnSection = renderButtons(CONFIG.buttons);
+const btnSection    = renderButtons(CONFIG.buttons);
 const sliderSection = renderSliders(CONFIG.sliders);
-const xySection = renderXYPads(CONFIG.xyPads);
+const xySection     = renderXYPads(CONFIG.xyPads);
+const gyroSection   = renderGyro(CONFIG.gyro);
 
-if (btnSection) app.appendChild(btnSection);
-if (xySection) app.appendChild(xySection);
+if (btnSection)    app.appendChild(btnSection);
+if (xySection)     app.appendChild(xySection);
+if (gyroSection)   app.appendChild(gyroSection);
 if (sliderSection) app.appendChild(sliderSection);
 
 // ============================================================

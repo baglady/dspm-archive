@@ -146,4 +146,17 @@ const CONFIG = {
     ],
   },
 
+  // --- Gyro tilt ----------------------------------------------------------
+  // Opt-in; iOS requires a permission tap so this is never active by default.
+  // beta  = pitch (tilt forward/back, -90°..90°) → assigned OSC channel
+  // gamma = roll  (tilt left/right,   -90°..90°) → assigned OSC channel
+  // deadzoneDeg: ignore tilt within ±N degrees of flat (avoids table-drift).
+  // rateHz: how often to send while active (bridge crowd-averages like touch).
+  gyro: {
+    deadzoneDeg: 8,
+    rateHz: 15,
+    betaDefaultPath:  "/param/filter_frequency",
+    gammaDefaultPath: "/barcode/output_level",
+  },
+
 };
