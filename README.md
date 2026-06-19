@@ -15,8 +15,7 @@ schema/                  -- Session Bundle Spec v1 JSON Schemas (manifest + meta
 sessions/                -- one directory per performance bundle (+ session_example)
 docs/                    -- control-surface mapping, bridge design, network notes
 capacitor.config.json    -- Android wrapping for the PWA (Amazon Appstore / Play)
-start-venue.ps1          -- one-command bridge launch (Windows venue laptop)
-start-tunnel.ps1         -- quick Cloudflare tunnel + auto QR code for the audience
+start-venue.ps1          -- one-command bridge launch; -Tunnel adds a public Cloudflare URL + QR
 ```
 
 ## What runs where
@@ -96,7 +95,11 @@ cloudflared tunnel --url http://localhost:8081
 # → https://<name>.trycloudflare.com   (serves the PWA, the control socket, and webhooks)
 ```
 
-**Easiest, with a QR for the audience:** after `start-venue.ps1` is up, run `./start-tunnel.ps1` in a second terminal. It starts that quick tunnel, prints the public URL, and saves + opens **`tunnel-qr.png`** for the crowd to scan. The quick-tunnel URL is random and changes every run, so the script regenerates the QR each time. (Needs cloudflared: `winget install Cloudflare.cloudflared`.) The QR encodes the **audience** URL only — your performer URL (`…/?admin=<token>`) is printed separately and kept out of the code.
+**Easiest, with a QR for the audience:** just add `-Tunnel` to the launch:
+```powershell
+./start-venue.ps1 -NornsHost <norns-ip> -Tunnel -AdminToken "something-long"
+```
+That starts the bridge, opens the quick tunnel, prints the public **audience** and **performer** URLs, and saves + opens **`tunnel-qr.png`** for the crowd to scan. The URL is random and changes each run, so the QR is regenerated every time. (Needs cloudflared: `winget install Cloudflare.cloudflared`.) The QR encodes the **audience** URL only; the performer URL (`…/performer.html?token=<token>`) is printed separately and kept out of the code. Pass a real `-AdminToken` when going public — the default is guessable.
 
 For a **stable, branded** URL (e.g. `dspm.hetti.be`) instead of a random one, set up a *named* tunnel — that requires the domain managed in Cloudflare; see [docs/remote-webhooks.md](docs/remote-webhooks.md).
 
