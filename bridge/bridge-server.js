@@ -42,7 +42,7 @@ const PWA_DIR = process.env.PWA_DIR === undefined
 // LAN-only laptop or Opal show is unaffected unless these are deliberately
 // used. Everything rides the same WS_PORT -- no second port to open.
 const ADMIN_TOKEN = process.env.BRIDGE_ADMIN_TOKEN || '' // unset -> /admin is loopback-only
-const MAX_MSGS_PER_SEC = parseInt(process.env.BRIDGE_MAX_MSGS_PER_SEC || '120', 10) // per WS client
+const MAX_MSGS_PER_SEC = parseInt(process.env.BRIDGE_MAX_MSGS_PER_SEC || '300', 10) // per WS client (XY pad = 2 msgs/move; 120Hz drag ~240/s, so headroom above legit use)
 const HOOK_MAX_PER_SEC = parseInt(process.env.BRIDGE_HOOK_MAX_PER_SEC || '20', 10) // per webhook IP
 const HOOK_HOLD_MS = parseInt(process.env.BRIDGE_HOOK_HOLD_MS || '1000', 10) // continuous-hook hold
 

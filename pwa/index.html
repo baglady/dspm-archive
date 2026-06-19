@@ -290,6 +290,60 @@
     color: var(--text-dim);
     letter-spacing: 0.1em;
   }
+
+  /* Performer admin bar -- only rendered when the page URL has ?admin=...
+     (see app.js / docs/remote-webhooks.md). Audience phones never see it. */
+  .admin-bar {
+    position: fixed;
+    right: 10px; bottom: 10px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    font-family: var(--font-display);
+  }
+
+  .admin-mute {
+    background: #123d1c;
+    border: 1px solid #3ddc84;
+    color: #d6ffe4;
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .admin-mute.muted {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .admin-gain { display: flex; flex-direction: column; gap: 2px; }
+  .admin-gain label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+  .admin-gain label .gval { color: var(--accent); }
+  .admin-gain input[type=range] { width: 96px; height: 28px; }
+
+  .admin-state {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    max-width: 80px;
+  }
 </style>
 </head>
 <body>

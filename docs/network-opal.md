@@ -60,6 +60,8 @@ Zone names `guest`/`lan` are GL.iNet defaults — confirm against `/etc/config/f
 
 Only needed if you want a *public* Ghost-hosted page to reach a *specific physical* norns. Generate a WireGuard server config on the VPS, import the `.conf` into the Opal's VPN Client → WireGuard, toggle on. The Opal then routes between VPS and local LAN over the tunnel, no venue-side port-forwarding. Everything else (local audience PWA over the guest SSID) works without it.
 
+For letting **anyone online anywhere** (remote audience, or third-party webhooks) reach a show — without a VPS, using an outbound-only Cloudflare Tunnel from the bridge machine — see [remote-webhooks.md](remote-webhooks.md). It's additive: the local guest-SSID rig here is unaffected.
+
 ## Open items
 
 - Confirm the Opal's exact guest firewall zone names once configured (firmware versions vary).
