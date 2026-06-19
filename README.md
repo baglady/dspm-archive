@@ -50,7 +50,9 @@ cd bridge && npm install
 NORNS_HOST=10.42.0.1 node bridge-server.js
 ```
 
-Each run creates a new `sessions/session_<timestamp>/` with a manifest and the two log streams; `Ctrl-C` finalizes the manifest's duration. Override `NORNS_HOST`, `NORNS_PORT` (default 10111), `BRIDGE_WS_PORT` (8081), `BRIDGE_TICK_MS` (40), `SESSIONS_DIR` via env.
+The bridge serves the audience PWA **and** the control WebSocket on one port (`BRIDGE_WS_PORT`, default 8081), so on the venue LAN audience phones need a single URL — `http://<bridge-host>:8081/` — and the guest zone only needs that one port open. Each run creates a new `sessions/session_<timestamp>/` with a manifest and the two log streams; `Ctrl-C` finalizes the manifest's duration. Override `NORNS_HOST`, `NORNS_PORT` (default 10111), `BRIDGE_WS_PORT` (8081), `BRIDGE_TICK_MS` (40), `SESSIONS_DIR`, `PWA_DIR` (set empty to disable static serving) via env.
+
+For the full show rig on a Windows laptop over shared WiFi, see [docs/venue-setup.md](docs/venue-setup.md) and `start-venue.ps1`.
 
 ## PWA (audience phones)
 

@@ -14,6 +14,7 @@
 // records, so they line up with norns' own perf_logger output afterward.
 
 const fs = require('fs')
+const http = require('http')
 const path = require('path')
 const OSC = require('osc-js')
 const WebSocket = require('ws')
@@ -25,6 +26,12 @@ const NORNS_PORT = parseInt(process.env.NORNS_PORT || '10111', 10)
 const WS_PORT = parseInt(process.env.BRIDGE_WS_PORT || '8081', 10)
 const TICK_MS = parseInt(process.env.BRIDGE_TICK_MS || '40', 10) // ~25Hz
 const SESSIONS_DIR = process.env.SESSIONS_DIR || path.join(__dirname, '..', 'sessions')
+// the audience PWA is served from this same process+port, so on the venue LAN
+// the guest zone only needs one port open to the bridge (see docs/network-opal.md).
+// set PWA_DIR='' to disable static serving (WebSocket-only bridge).
+const PWA_DIR = process.env.PWA_DIR === undefined
+  ? path.join(__dirname, '..', 'pwa')
+  : process.env.PWA_DIR
 
 // Full parameter surface. The channel name a phone sends IS the OSC path the
 // bridge forwards to norns, so adding a control here is the only step needed to
@@ -145,9 +152,37 @@ const osc = new OSC({
 })
 osc.open()
 
+// ---- http server: serves the audience PWA, hosts the websocket -------------
+// One port does both, so audience phones load the page and open the control
+// socket against the same origin -- no second port, no mixed-content, and the
+// PWA's resolveBridgeUrl() falls through to the page's own host automatically.
+
+const STATIC_TYPES = {
+  '.html': 'text/html', '.js': 'application/javascript', '.json': 'application/json',
+  '.png': 'image/png', '.css': 'text/css', '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json',
+}
+
+function serveStatic(req, res) {
+  if (!PWA_DIR) { res.writeHead(404); return res.end('not found') }
+  const root = path.resolve(PWA_DIR)
+  let p = decodeURIComponent((req.url || '/').split('?')[0])
+  if (p === '/') p = '/index.html'
+  const fp = path.join(root, p)
+  if (!fp.startsWith(root)) { res.writeHead(403); return res.end('forbidden') }
+  fs.readFile(fp, (err, data) => {
+    if (err) { res.writeHead(404); return res.end('not found') }
+    res.writeHead(200, { 'Content-Type': STATIC_TYPES[path.extname(fp)] || 'application/octet-stream' })
+    res.end(data)
+  })
+}
+
+const httpServer = http.createServer(serveStatic)
+httpServer.listen(WS_PORT, '0.0.0.0')
+
 // ---- websocket in from phones ----------------------------------------------
 
-const wss = new WebSocket.Server({ port: WS_PORT })
+const wss = new WebSocket.Server({ server: httpServer })
 
 // per-channel state: clientId -> {value, ts}
 const touches = {}
@@ -224,5 +259,6 @@ process.on('SIGTERM', () => {
   process.exit(0)
 })
 
-console.log(`[bridge] websocket on :${WS_PORT}, OSC -> ${NORNS_HOST}:${NORNS_PORT}, tick ${TICK_MS}ms`)
+console.log(`[bridge] http + websocket on :${WS_PORT}, OSC -> ${NORNS_HOST}:${NORNS_PORT}, tick ${TICK_MS}ms`)
+console.log(`[bridge] serving PWA from ${PWA_DIR || '(disabled)'}`)
 console.log(`[bridge] ${CHANNEL_NAMES.length} channels (${CONTINUOUS_CHANNELS.length} continuous, ${CHANNEL_NAMES.length - CONTINUOUS_CHANNELS.length} discrete)`)
