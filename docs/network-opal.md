@@ -2,6 +2,22 @@
 
 The Opal is used as **AP + wired switch + VPN endpoint** — not as a compute host (no USB-A, modest CPU). The bridge runs on a separate laptop/Pi on the LAN.
 
+## Quick start: everything over the Opal's WiFi
+
+The minimal working rig — norns, the bridge laptop, and all phones on the Opal's **main** SSID (no guest isolation yet; add that from the sections below once it works).
+
+1. **Opal first boot**: update firmware, then set a 5GHz SSID (e.g. `DSPM`), a memorable LAN subnet (admin → Network → LAN, e.g. `192.168.8.1/24`), and leave the *main* network's client isolation **off** (default) so phones can reach the laptop. Internet isn't needed during a show — the WAN port can stay unplugged; the LAN + WiFi run as an isolated island.
+2. **Reserve fixed IPs** (admin → DHCP → static leases, by MAC) for norns and the laptop so addresses don't move between shows — e.g. norns `192.168.8.20`, laptop `192.168.8.30`.
+3. **norns**: SYSTEM > WIFI > join `DSPM`; it shows its IP. SELECT > **dspm_archive**. (If you have a USB-ethernet adapter, wiring norns into a LAN port instead is even steadier — same steps, it just gets its IP from the cable.)
+4. **Laptop**: join `DSPM`, then run the bridge pointed at norns' Opal IP:
+   ```powershell
+   ./start-venue.ps1 -NornsHost 192.168.8.20
+   ```
+   It serves the audience page **and** control socket on `:8081` and prints the audience URL.
+5. **Phones**: join `DSPM`, open `http://192.168.8.30:8081/` (the laptop's IP).
+
+That's the whole rig over WiFi. The rest of this doc is for *scaling up* — isolating the audience onto their own SSID, and the optional remote tunnel.
+
 ## Topology
 
 ```
@@ -23,7 +39,7 @@ The Opal is used as **AP + wired switch + VPN endpoint** — not as a compute ho
 
 ## Allowing audience phones to reach only the bridge
 
-With the bridge host at a fixed LAN IP (e.g. `192.168.8.150`, websocket port 8081), add a firewall exception so the guest zone can reach *only* that IP:port — not norns, not anything else. SSH into the Opal:
+With the bridge host at a fixed LAN IP (e.g. `192.168.8.150`, port 8081), add a firewall exception so the guest zone can reach *only* that IP:port — not norns, not anything else. Because the bridge serves the audience page *and* the control socket on that single port, this one rule lets guests both **load** the controller and **drive** it, while still being unable to touch norns or anything else on the LAN. SSH into the Opal:
 
 ```sh
 uci add firewall rule
