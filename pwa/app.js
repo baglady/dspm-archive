@@ -337,3 +337,86 @@ const xySection = renderXYPads(CONFIG.xyPads);
 if (btnSection) app.appendChild(btnSection);
 if (xySection) app.appendChild(xySection);
 if (sliderSection) app.appendChild(sliderSection);
+
+// ============================================================
+// PERFORMER ADMIN BAR  (kill-switch / dimmer)
+// Only rendered when the page URL carries ?admin=<token> -- audience phones
+// never see it. Hits the bridge's /admin/crowd endpoint (see
+// docs/remote-webhooks.md). The endpoint lives on the same server as the
+// WebSocket bridge, so we derive its http(s) URL from the same resolution.
+//   - performer on the bridge machine itself: ?admin  (no token needed; the
+//     endpoint is loopback-open by default)
+//   - performer remote / via tunnel: ?admin=<BRIDGE_ADMIN_TOKEN>
+// ============================================================
+function setupAdminBar() {
+  if (!params.has("admin")) return;
+  const token = params.get("admin"); // may be "" for loopback use
+
+  // bridgeUrl is ws(s)://...; the admin route is http(s):// on the same host.
+  const adminBase = (bridgeUrl.replace(/^ws/, "http").replace(/\/+$/, "")) + "/admin/crowd";
+  function adminFetch(setObj) {
+    const sp = new URLSearchParams();
+    if (setObj) for (const k in setObj) sp.set(k, setObj[k]);
+    if (token) sp.set("token", token);
+    const qs = sp.toString();
+    // POST with no enabled/gain params is a safe read (the bridge only mutates
+    // when those keys are present), so the same call inits and updates.
+    return fetch(adminBase + (qs ? "?" + qs : ""), { method: "POST" }).then((r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    });
+  }
+
+  const bar = el("div", "admin-bar");
+
+  const muteBtn = el("div", "admin-mute", ["LIVE"]);
+
+  const gainWrap = el("div", "admin-gain");
+  const gainLabel = el("label", null, [
+    el("span", null, ["CROWD"]),
+    el("span", "gval", ["100%"]),
+  ]);
+  const gainInput = document.createElement("input");
+  gainInput.type = "range";
+  gainInput.min = "0"; gainInput.max = "1"; gainInput.step = "0.01"; gainInput.value = "1";
+  gainWrap.appendChild(gainLabel);
+  gainWrap.appendChild(gainInput);
+
+  const stateEl = el("div", "admin-state", ["…"]);
+
+  let enabled = true;
+  function applyState(s) {
+    enabled = !!s.enabled;
+    muteBtn.textContent = enabled ? "LIVE" : "MUTED";
+    muteBtn.classList.toggle("muted", !enabled);
+    if (typeof s.gain === "number") {
+      gainInput.value = String(s.gain);
+      gainLabel.lastChild.textContent = Math.round(s.gain * 100) + "%";
+    }
+    stateEl.textContent = enabled ? "crowd → norns" : "crowd muted";
+  }
+
+  muteBtn.addEventListener("click", () => {
+    adminFetch({ enabled: enabled ? 0 : 1 })
+      .then(applyState)
+      .catch((e) => { stateEl.textContent = "admin: " + e.message; });
+  });
+
+  gainInput.addEventListener("input", () => {
+    gainLabel.lastChild.textContent = Math.round(parseFloat(gainInput.value) * 100) + "%";
+  });
+  gainInput.addEventListener("change", () => {
+    adminFetch({ gain: gainInput.value })
+      .then(applyState)
+      .catch((e) => { stateEl.textContent = "admin: " + e.message; });
+  });
+
+  bar.appendChild(muteBtn);
+  bar.appendChild(gainWrap);
+  bar.appendChild(stateEl);
+  document.body.appendChild(bar);
+
+  // initial read
+  adminFetch().then(applyState).catch((e) => { stateEl.textContent = "admin: " + e.message; });
+}
+setupAdminBar();
