@@ -5,7 +5,9 @@
   "description": "Many-phones-to-norns aggregation bridge with session-capture logging",
   "main": "bridge-server.js",
   "scripts": {
-    "start": "node bridge-server.js"
+    "start": "node bridge-server.js",
+    "loadtest": "node loadtest.js",
+    "analyze": "node analyze-session.js"
   },
   "dependencies": {
     "osc-js": "^2.4.0",

@@ -22,6 +22,8 @@ capacitor.config.json    -- Android wrapping for the PWA (Amazon Appstore / Play
 - **VPS alongside Ghost** (or any host with access to the sessions dir) — `backend/` for post-show labeling.
 - **audience phones** — `pwa/`, installable, or via the Capacitor-wrapped store listing.
 
+The bridge runs three ways — **laptop** at a show, **Pi behind the Opal** always-on, or **code-server/cloud** for browser dev — all from the same code. See [deploy/README.md](deploy/README.md) for the run profiles and the load-test tools.
+
 ## Deploying the norns side (without touching norns_project)
 
 The new script installs as its own folder, so on norns it shows up as a **separate** entry in SELECT next to `barcode`. Nothing about the existing symlinked `barcode` → `norns_project` setup changes.
