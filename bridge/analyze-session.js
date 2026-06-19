@@ -67,12 +67,17 @@ console.log('')
 if (ticks.length > 1) {
   const buckets = {}
   for (const t of ticks) buckets[Math.floor(t.t)] = (buckets[Math.floor(t.t)] || 0) + 1
-  const counts = Object.values(buckets)
+  const keys = Object.keys(buckets).map(Number).sort((a, b) => a - b)
+  // drop the first and last buckets: they're partial seconds (touches starting
+  // or stopping mid-second), which would otherwise read as false jitter. Only
+  // full interior seconds reflect the real steady-state tick rate.
+  const interiorKeys = keys.length >= 3 ? keys.slice(1, -1) : keys
+  const counts = interiorKeys.map((k) => buckets[k])
   const min = Math.min(...counts)
   const max = Math.max(...counts)
   const mean = counts.reduce((a, b) => a + b, 0) / counts.length
   console.log(`tick rate/s     : mean ${mean.toFixed(1)}, min ${min}, max ${max}` +
-    `  ${max - min <= 3 ? '[stable]' : '[JITTERY - investigate]'}`)
+    ` (steady-state, edge seconds trimmed)  ${max - min <= 3 ? '[stable]' : '[JITTERY - investigate]'}`)
   console.log('')
 }
 
