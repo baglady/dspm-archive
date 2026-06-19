@@ -16,14 +16,20 @@ NODEBIN="$(dirname "$NODE")"
 ROOT="$HOME/dspm-archive"
 echo "using node: $NODE"
 
-# Kill any previous instances so we don't hit EADDRINUSE.
-pkill -f "$ROOT/backend/server.js"   2>/dev/null
-pkill -f "$ROOT/bridge/bridge-server.js" 2>/dev/null
-pkill -f "$ROOT/pwa/static-server.js" 2>/dev/null
+# Kill any previous instances so we don't hit EADDRINUSE. Match on the script
+# basename, because below we launch node with the *full* path -- a basename
+# pattern matches that AND any older instance launched with a relative name, so a
+# stale bridge can't keep holding :8081 while the new one silently fails to bind.
+pkill -f "backend/server.js"   2>/dev/null
+pkill -f "bridge-server.js"    2>/dev/null
+pkill -f "pwa/static-server.js" 2>/dev/null
 sleep 1
 
-cd "$ROOT/backend" && setsid "$NODE" server.js < /dev/null > "$HOME/backend.log" 2>&1 &
-cd "$ROOT/bridge"  && setsid "$NODE" bridge-server.js < /dev/null > "$HOME/bridge.log" 2>&1 &
+# Launch with absolute script paths so the command line contains a stable,
+# matchable string (the relative `node bridge-server.js` form did not match the
+# pkill patterns above, so restarts left orphaned processes on the ports).
+setsid "$NODE" "$ROOT/backend/server.js" < /dev/null > "$HOME/backend.log" 2>&1 &
+setsid "$NODE" "$ROOT/bridge/bridge-server.js" < /dev/null > "$HOME/bridge.log" 2>&1 &
 setsid "$NODE" "$ROOT/pwa/static-server.js" "$ROOT/pwa" 3000 < /dev/null > "$HOME/pwa.log" 2>&1 &
 
 sleep 3
