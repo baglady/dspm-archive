@@ -2,3 +2,4 @@ node_modules/
 *.log
 .DS_Store
 deploy/dspm-bridge.env
+tunnel-qr.png

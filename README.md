@@ -15,6 +15,8 @@ schema/                  -- Session Bundle Spec v1 JSON Schemas (manifest + meta
 sessions/                -- one directory per performance bundle (+ session_example)
 docs/                    -- control-surface mapping, bridge design, network notes
 capacitor.config.json    -- Android wrapping for the PWA (Amazon Appstore / Play)
+start-venue.ps1          -- one-command bridge launch (Windows venue laptop)
+start-tunnel.ps1         -- quick Cloudflare tunnel + auto QR code for the audience
 ```
 
 ## What runs where
@@ -93,6 +95,10 @@ To let people who aren't on the venue WiFi take part, run a [Cloudflare Tunnel](
 cloudflared tunnel --url http://localhost:8081
 # → https://<name>.trycloudflare.com   (serves the PWA, the control socket, and webhooks)
 ```
+
+**Easiest, with a QR for the audience:** after `start-venue.ps1` is up, run `./start-tunnel.ps1` in a second terminal. It starts that quick tunnel, prints the public URL, and saves + opens **`tunnel-qr.png`** for the crowd to scan. The quick-tunnel URL is random and changes every run, so the script regenerates the QR each time. (Needs cloudflared: `winget install Cloudflare.cloudflared`.) The QR encodes the **audience** URL only — your performer URL (`…/?admin=<token>`) is printed separately and kept out of the code.
+
+For a **stable, branded** URL (e.g. `dspm.hetti.be`) instead of a random one, set up a *named* tunnel — that requires the domain managed in Cloudflare; see [docs/remote-webhooks.md](docs/remote-webhooks.md).
 
 Remote phones open that URL and mix into the same crowd average as the room. Third-party services (Twitch, Discord, Stripe, IFTTT/Zapier, Twilio, …) POST to `/hook/<osc-path>`, where the path after `/hook/` is the OSC channel:
 
