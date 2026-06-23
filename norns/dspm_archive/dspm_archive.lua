@@ -212,10 +212,27 @@ end
 --      since they bypass params:set (and therefore the param-action
 --      logging hook below) entirely.
 osc.event = function(path, args, from)
-  local v = args[1]
   feedback.set_bridge(from) -- learn where to send norns->phones feedback
   feedback.start({state=state, voice=voice}) -- begins polling on first contact (idempotent)
 
+  if path == "/dspm/tape/start" then
+    local name = (args and args[1]) or "dspm_session"
+    name = string.gsub(name, "%s+", "_")
+    name = string.gsub(name, "[^%w%-%_]", "")
+    if name == "" then name = "dspm_session" end
+    local fname = _path.tape .. name .. ".wav"
+    audio.tape_record_open(fname)
+    clock.run(function()
+      clock.sleep(0.1)
+      audio.tape_record_start()
+    end)
+    return
+  elseif path == "/dspm/tape/stop" then
+    audio.tape_record_stop()
+    return
+  end
+
+  local v = (args and args[1]) or 0
   local param_id = string.match(path, "^/param/(.+)$")
   if param_id ~= nil then
     if param_id == "reverse" or param_id == "quantize" then

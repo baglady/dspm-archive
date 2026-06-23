@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#0b0b0f" />
+<link rel="manifest" href="manifest.json" />
+<title>Octatrack Control</title>
+<style>
+  :root { --bg:#0b0b0f; --panel:#15151c; --line:#262633; --accent:#ff7a18; --txt:#e8e8f0; --dim:#8a8aa0; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--txt);
+         font:14px/1.3 -apple-system,system-ui,Segoe UI,Roboto,sans-serif; }
+  header { display:flex; align-items:center; gap:10px; padding:10px 12px;
+           border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:5; }
+  header h1 { font-size:15px; margin:0; font-weight:600; letter-spacing:.5px; }
+  #status { margin-left:auto; font-size:11px; color:var(--dim); }
+  #status.ok { color:#4ade80; } #status.err { color:#f87171; }
+  #tabs { display:flex; gap:6px; overflow-x:auto; padding:8px 12px; border-bottom:1px solid var(--line); }
+  .tab { flex:0 0 auto; padding:7px 12px; border:1px solid var(--line); border-radius:20px;
+         background:var(--panel); color:var(--dim); font-weight:600; }
+  .tab.active { color:#000; background:var(--accent); border-color:var(--accent); }
+  #pinned { display:flex; flex-wrap:wrap; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  main { padding:12px; }
+  .group { margin-bottom:18px; }
+  .group h2 { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim);
+              margin:0 0 8px; }
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .ctl { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; }
+  .ctl label { display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; }
+  .ctl label .val { color:var(--accent); font-variant-numeric:tabular-nums; }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  .btn { width:100%; padding:14px; border:1px solid var(--line); border-radius:10px;
+         background:var(--panel); color:var(--txt); font-weight:700; }
+  .btn.on { background:var(--accent); color:#000; border-color:var(--accent); }
+  .pin { flex:1 1 30%; }
+  #admin { display:none; position:fixed; bottom:0; left:0; right:0; padding:10px 12px;
+           background:#1a0d05; border-top:1px solid var(--accent); gap:12px; align-items:center; }
+  #admin.show { display:flex; }
+  #admin .kill { padding:8px 14px; border-radius:8px; border:1px solid var(--accent);
+                 background:#000; color:var(--accent); font-weight:800; }
+  #admin .kill.muted { background:#f87171; color:#000; border-color:#f87171; }
+  .bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 12px;
+         border-bottom:1px solid var(--line); background:var(--panel); }
+  .bar .lbl { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); }
+  .bar select, .bar input, .bar button {
+    background:var(--bg); color:var(--txt); border:1px solid var(--line);
+    border-radius:7px; padding:7px 9px; font:inherit; font-size:12px; }
+  .bar select { max-width:42vw; }
+  .bar input { width:110px; }
+  .bar button { font-weight:700; cursor:pointer; border-color:var(--accent); color:var(--accent); background:#000; }
+  .bar button:active { background:var(--accent); color:#000; }
+  .bar button.danger { border-color:#f87171; color:#f87171; }
+  .bar .spacer { flex:1 1 auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>OCTATRACK</h1>
+  <span id="status">connecting…</span>
+</header>
+<div class="bar" id="port-bar">
+  <span class="lbl">MIDI out</span>
+  <select id="sel-out" title="MIDI output (to the Octatrack)"></select>
+  <button id="ports-refresh" title="Rescan ports">⟳</button>
+</div>
+<div class="bar" id="preset-bar">
+  <span class="lbl">Preset</span>
+  <select id="sel-preset"></select>
+  <button id="preset-load">Load</button>
+  <span class="spacer"></span>
+  <input id="preset-name" placeholder="name…" maxlength="48" />
+  <button id="preset-save">Save</button>
+  <button id="preset-del" class="danger">Del</button>
+</div>
+<div id="tabs"></div>
+<div id="pinned"></div>
+<main id="surface"></main>
+
+<div id="admin">
+  <button class="kill" id="killBtn">LIVE</button>
+  <label style="flex:1; font-size:12px;">CROWD
+    <input type="range" id="crowdGain" min="0" max="1" step="0.01" value="1" style="width:100%">
+  </label>
+</div>
+
+<script src="config.js"></script>
+<script src="../midi-map.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "spec": "octatrack-midi-control/session/v1",
+  "sessionId": "session_2026-06-20T06-09-04-421Z",
+  "startedAt": "2026-06-20T06:09:04.428Z",
+  "midiBackend": "easymidi(\"TouchOSC Bridge\")",
+  "audioChannels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "autoChannel": 9
+}

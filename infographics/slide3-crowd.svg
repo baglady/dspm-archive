@@ -1,0 +1,70 @@
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The crowd: one performer drove 61 percent of gestures, four others shared the rest">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#c7ecff"/>
+      <stop offset="0.42" stop-color="#d8f3ef"/>
+      <stop offset="0.72" stop-color="#e6f7cf"/>
+      <stop offset="1" stop-color="#cdeeb0"/>
+    </linearGradient>
+    <radialGradient id="topglow" cx="0.5" cy="-0.1" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.78"/>
+      <stop offset="0.48" stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.46"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="hero" cx="0.5" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#f3ffd6"/>
+      <stop offset="0.5" stop-color="#b6e36a"/>
+      <stop offset="1" stop-color="#6fc02f"/>
+    </radialGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="22" flood-color="#145070" flood-opacity="0.20"/>
+    </filter>
+    <filter id="softsm" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#145070" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="1080" fill="url(#sky)"/>
+  <rect width="1080" height="1080" fill="url(#topglow)"/>
+
+  <g font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif">
+    <text x="90" y="150" font-size="40" font-weight="600" fill="#1f8a4c" letter-spacing="4">dspm·2</text>
+    <text x="90" y="232" font-size="76" font-weight="700" fill="#133b46">The crowd</text>
+    <text x="90" y="288" font-size="30" fill="#5a7884">Five phones in the take — but one set led the dance.</text>
+
+    <circle cx="320" cy="600" r="200" fill="url(#hero)" stroke="#ffffff" stroke-width="6" filter="url(#soft)"/>
+    <ellipse cx="320" cy="520" rx="150" ry="70" fill="url(#gloss)" opacity="0.5"/>
+    <text x="320" y="585" text-anchor="middle" font-size="150" font-weight="700" fill="#1c5a2a">61%</text>
+    <text x="320" y="660" text-anchor="middle" font-size="30" fill="#1f5a2c" letter-spacing="1">2,080 gestures</text>
+    <text x="320" y="855" text-anchor="middle" font-size="30" fill="#5a7884">lead performer</text>
+    <text x="320" y="895" text-anchor="middle" font-size="26" fill="#9bb4bf" font-family="monospace">2a3ezgbwj64</text>
+
+    <g>
+      <rect x="610" y="430" width="380" height="78" rx="22" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.85" stroke-width="2" filter="url(#softsm)"/>
+      <text x="640" y="480" font-size="30" fill="#133b46" font-family="monospace">re5c6sjtc3s</text>
+      <text x="960" y="480" text-anchor="end" font-size="34" font-weight="700" fill="#1f8a4c">442</text>
+
+      <rect x="610" y="528" width="380" height="78" rx="22" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.85" stroke-width="2" filter="url(#softsm)"/>
+      <text x="640" y="578" font-size="30" fill="#133b46" font-family="monospace">nc0cwgtxg7</text>
+      <text x="960" y="578" text-anchor="end" font-size="34" font-weight="700" fill="#1f8a4c">354</text>
+
+      <rect x="610" y="626" width="380" height="78" rx="22" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.85" stroke-width="2" filter="url(#softsm)"/>
+      <text x="640" y="676" font-size="30" fill="#133b46" font-family="monospace">xj67mysuml</text>
+      <text x="960" y="676" text-anchor="end" font-size="34" font-weight="700" fill="#1f8a4c">268</text>
+
+      <rect x="610" y="724" width="380" height="78" rx="22" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.85" stroke-width="2" filter="url(#softsm)"/>
+      <text x="640" y="774" font-size="30" fill="#133b46" font-family="monospace">lh8l6ooctcm</text>
+      <text x="960" y="774" text-anchor="end" font-size="34" font-weight="700" fill="#1f8a4c">255</text>
+    </g>
+
+    <text x="610" y="858" font-size="26" fill="#5a7884">xj67 &amp; lh8l6 ran the record / clear / reverse edits</text>
+  </g>
+</svg>

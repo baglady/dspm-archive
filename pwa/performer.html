@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>barcode // performer</title>
-<meta name="theme-color" content="#0a0a0c">
+<meta name="theme-color" content="#cdeafe">
 <style>
 :root {
   --bg:         #0a0a0c;
@@ -265,6 +265,109 @@ footer {
   background: var(--panel);
 }
 
+/* ---- REC META bar ---- */
+#rec-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.rec-start-btn {
+  background: #1a0d0c; border: 1px solid var(--accent);
+  color: var(--accent); font-family: var(--fd);
+  font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  padding: 8px 16px; border-radius: 5px; cursor: pointer;
+  transition: background 80ms;
+}
+.rec-start-btn:hover { background: var(--accent-dim); }
+
+#rec-active { display: none; align-items: center; gap: 12px; flex: 1; }
+#rec-active.on { display: flex; }
+
+.rec-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  animation: rec-pulse 1s ease-in-out infinite;
+}
+@keyframes rec-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+#rec-name-display {
+  font-family: var(--fd); font-size: 12px;
+  color: var(--text); letter-spacing: 0.1em; flex: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+#rec-timer {
+  font-family: var(--fd); font-size: 13px;
+  color: var(--accent); letter-spacing: 0.1em; flex-shrink: 0;
+}
+
+.rec-stop-btn {
+  background: var(--accent); border: none;
+  color: #fff; font-family: var(--fd);
+  font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  padding: 8px 16px; border-radius: 5px; cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ---- REC modals ---- */
+.rec-overlay {
+  display: none; position: fixed; inset: 0; z-index: 8000;
+  background: rgba(0,0,0,0.85);
+  align-items: center; justify-content: center;
+}
+.rec-overlay.open { display: flex; }
+
+.rec-modal {
+  background: #141418; border: 1px solid var(--line);
+  border-radius: 12px; padding: 28px;
+  width: min(420px, 92vw);
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.rec-modal h2 {
+  font-family: var(--fd); font-size: 12px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--text); margin: 0;
+}
+
+.rec-modal p {
+  font-family: var(--fd); font-size: 11px;
+  color: var(--text-dim); margin: 0; letter-spacing: 0.06em;
+}
+
+.rec-modal input[type=text] {
+  width: 100%; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 5px;
+  color: var(--text); font-family: var(--fd);
+  font-size: 14px; padding: 12px 14px;
+  outline: none;
+}
+.rec-modal input[type=text]:focus { border-color: var(--accent); }
+
+.rec-modal-row { display: flex; gap: 10px; }
+
+.rec-confirm-btn {
+  flex: 1; background: var(--accent); border: none;
+  color: #fff; font-family: var(--fd);
+  font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase;
+  padding: 12px; border-radius: 6px; cursor: pointer;
+}
+.rec-cancel-btn {
+  background: var(--panel); border: 1px solid var(--line);
+  color: var(--text-dim); font-family: var(--fd);
+  font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 12px 18px; border-radius: 6px; cursor: pointer;
+}
+.rec-summary-block {
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 12px 14px;
+  font-family: var(--fd); font-size: 11px;
+  color: var(--text); letter-spacing: 0.08em;
+  line-height: 1.8;
+}
+
 .page-nav a, .page-nav span {
   font-family: var(--fd);
   font-size: 10px;
@@ -278,6 +381,7 @@ footer {
 .page-nav a:hover { color: var(--text); }
 .page-nav .current { color: var(--accent); border-bottom: 2px solid var(--accent); }
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
@@ -289,7 +393,48 @@ footer {
 <nav class="page-nav">
   <a id="nav-audience" href="index.html">← AUDIENCE</a>
   <span class="current">PERFORMER</span>
+  <a href="archive.html">ARCHIVE</a>
+  <a href="#" onclick="openUploadModal();return false;">UPLOAD MEDIA</a>
+  <a href="#" onclick="qrShareOpen();return false;">QR</a>
+  <a href="https://hetti.be/dspm" target="_blank" rel="noopener">ABOUT ↗</a>
 </nav>
+
+<!-- REC META bar -->
+<div id="rec-bar">
+  <button class="rec-start-btn" id="rec-btn">● REC META</button>
+  <div id="rec-active">
+    <div class="rec-dot"></div>
+    <span id="rec-name-display"></span>
+    <span id="rec-timer">0:00</span>
+    <button class="rec-stop-btn" id="rec-stop-btn">■ STOP</button>
+  </div>
+</div>
+
+<!-- Start modal -->
+<div class="rec-overlay" id="rec-start-overlay">
+  <div class="rec-modal">
+    <h2>Name this recording</h2>
+    <p>Tape will start recording on norns when you confirm.</p>
+    <input type="text" id="rec-name-input" placeholder="e.g. opening night, take 2...">
+    <div class="rec-modal-row">
+      <button class="rec-confirm-btn" id="rec-start-confirm">● START RECORDING</button>
+      <button class="rec-cancel-btn" id="rec-start-cancel">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stop confirmation modal -->
+<div class="rec-overlay" id="rec-stop-overlay">
+  <div class="rec-modal">
+    <h2>Recording stopped</h2>
+    <div class="rec-summary-block" id="rec-summary"></div>
+    <p>Upload video and field recordings to sync with this tape.</p>
+    <div class="rec-modal-row">
+      <button class="rec-confirm-btn" id="rec-upload-btn">↑ UPLOAD MEDIA</button>
+      <button class="rec-cancel-btn" id="rec-stop-done">DONE</button>
+    </div>
+  </div>
+</div>
 
 <main id="app"></main>
 
@@ -326,6 +471,14 @@ function sendOSC(path, args) {
   const value = Array.isArray(args) ? Number(args[0]) : Number(args);
   if (ws && ws.readyState === WebSocket.OPEN)
     ws.send(JSON.stringify({ channel: path, value }));
+}
+
+// Full-patch panic: the bridge ramps the whole patch to a known-good baseline
+// and broadcasts each step, so the sliders/toggles below re-sync via their
+// feedback listeners. Not a norns restart -- loop + tape are untouched.
+function sendReset() {
+  if (ws && ws.readyState === WebSocket.OPEN)
+    ws.send(JSON.stringify({ type: "reset" }));
 }
 
 function connectWS() {
@@ -493,6 +646,30 @@ function buildCrowd() {
 }
 
 // ============================================================
+// RESET PATCH  (full-patch panic)
+// ============================================================
+function buildReset() {
+  const sec = el("div", "sec");
+  sec.appendChild(el("h2", null, ["RESET PATCH"]));
+  const btn = el("div", "crowd-btn", ["↺ RESET WHOLE PATCH"]);
+  btn.style.width = "100%";
+  btn.style.textAlign = "center";
+  const note = el("div", "crowd-state",
+    ["smoothly returns every parameter to a known-good baseline · loop + tape untouched"]);
+  let busy = false;
+  btn.addEventListener("click", () => {
+    if (busy) return;
+    busy = true;
+    btn.classList.add("muted");
+    sendReset();
+    setTimeout(() => { busy = false; btn.classList.remove("muted"); }, 1700);
+  });
+  sec.appendChild(btn);
+  sec.appendChild(note);
+  return sec;
+}
+
+// ============================================================
 // TRANSPORT
 // ============================================================
 function buildTransport() {
@@ -612,10 +789,141 @@ function buildVoices() {
 // ============================================================
 const app = document.getElementById("app");
 app.appendChild(buildCrowd());
+app.appendChild(buildReset());
 app.appendChild(buildTransport());
 app.appendChild(buildGlobal());
 app.appendChild(buildSlew());
 app.appendChild(buildVoices());
 </script>
+<script src="upload.js"></script>
+<script>
+// ---- REC META logic -------------------------------------------------------
+(function () {
+  const _p = new URLSearchParams(location.search)
+  const BRIDGE_PORT = '8081'
+  function apiBase() {
+    const override = _p.get('bridge')
+    if (override) return (override.startsWith('wss') ? 'https://' : 'http://') + override.replace(/^wss?:\/\//, '').replace(/\/$/, '')
+    if (location.pathname.includes('/proxy/')) return location.origin + location.pathname.replace(/\/proxy\/\d+\/.*/, '/proxy/' + BRIDGE_PORT + '/')
+    return location.origin
+  }
+  const API = apiBase()
+
+  const recBtn        = document.getElementById('rec-btn')
+  const recActive     = document.getElementById('rec-active')
+  const recNameDisp   = document.getElementById('rec-name-display')
+  const recTimer      = document.getElementById('rec-timer')
+  const recStopBtn    = document.getElementById('rec-stop-btn')
+  const startOverlay  = document.getElementById('rec-start-overlay')
+  const nameInput     = document.getElementById('rec-name-input')
+  const startConfirm  = document.getElementById('rec-start-confirm')
+  const startCancel   = document.getElementById('rec-start-cancel')
+  const stopOverlay   = document.getElementById('rec-stop-overlay')
+  const recSummary    = document.getElementById('rec-summary')
+  const uploadBtn     = document.getElementById('rec-upload-btn')
+  const stopDone      = document.getElementById('rec-stop-done')
+
+  let recStartWall = null
+  let timerInterval = null
+  let lastStopResult = null
+
+  function fmt(s) {
+    const m = Math.floor(s / 60)
+    return m + ':' + String(Math.floor(s % 60)).padStart(2, '0')
+  }
+
+  // ---- open start modal ----
+  recBtn.addEventListener('click', () => {
+    nameInput.value = ''
+    startOverlay.classList.add('open')
+    setTimeout(() => nameInput.focus(), 80)
+  })
+  startCancel.addEventListener('click', () => startOverlay.classList.remove('open'))
+  startOverlay.addEventListener('click', e => { if (e.target === startOverlay) startOverlay.classList.remove('open') })
+
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') startConfirm.click() })
+
+  // ---- start recording ----
+  const startErr = document.createElement('div')
+  startErr.style.cssText = 'color:#ff3b30;font-family:Courier New,monospace;font-size:11px;display:none'
+  startConfirm.parentElement.insertAdjacentElement('afterend', startErr)
+
+  startConfirm.addEventListener('click', async () => {
+    const name = nameInput.value.trim() || 'untitled'
+    startConfirm.disabled = true
+    startErr.style.display = 'none'
+    try {
+      const r = await fetch(API + '/api/recording/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const json = await r.json()
+      if (!r.ok) throw new Error(json.error || 'HTTP ' + r.status)
+      startOverlay.classList.remove('open')
+      recStartWall = Date.now()
+      recNameDisp.textContent = name
+      recBtn.style.display = 'none'
+      recActive.classList.add('on')
+      timerInterval = setInterval(() => {
+        recTimer.textContent = fmt((Date.now() - recStartWall) / 1000)
+      }, 1000)
+    } catch (e) {
+      startErr.textContent = 'Error: ' + (e.message || 'could not reach bridge')
+      startErr.style.display = 'block'
+    }
+    startConfirm.disabled = false
+  })
+
+  // ---- stop recording ----
+  recStopBtn.addEventListener('click', async () => {
+    recStopBtn.disabled = true
+    try {
+      const r = await fetch(API + '/api/recording/stop', { method: 'POST' })
+      lastStopResult = await r.json()
+    } catch (e) { lastStopResult = null }
+
+    clearInterval(timerInterval)
+    recActive.classList.remove('on')
+    recBtn.style.display = ''
+    recTimer.textContent = '0:00'
+    recStopBtn.disabled = false
+
+    if (lastStopResult) {
+      recSummary.innerHTML =
+        `<b>${lastStopResult.name}</b><br>` +
+        `Duration: ${fmt(lastStopResult.duration || 0)}<br>` +
+        `Session: ${lastStopResult.session_id || '—'}`
+      stopOverlay.classList.add('open')
+    }
+  })
+
+  // ---- stop modal ----
+  uploadBtn.addEventListener('click', () => {
+    stopOverlay.classList.remove('open')
+    if (typeof openUploadModal === 'function') {
+      openUploadModal(lastStopResult && lastStopResult.session_id)
+    }
+  })
+  stopDone.addEventListener('click', () => stopOverlay.classList.remove('open'))
+  stopOverlay.addEventListener('click', e => { if (e.target === stopOverlay) stopOverlay.classList.remove('open') })
+
+  // ---- restore state if bridge was already recording ----
+  fetch(API + '/api/recording/state').then(r => r.json()).then(s => {
+    if (s.active) {
+      recStartWall = Date.now() - (s.elapsed || 0) * 1000
+      recNameDisp.textContent = s.name || 'untitled'
+      recBtn.style.display = 'none'
+      recActive.classList.add('on')
+      recTimer.textContent = fmt(s.elapsed || 0)
+      timerInterval = setInterval(() => {
+        recTimer.textContent = fmt((Date.now() - recStartWall) / 1000)
+      }, 1000)
+    }
+  }).catch(() => {})
+})()
+</script>
+<script src="qrcode.min.js"></script>
+<script src="qr-share.js"></script>
 </body>
 </html>

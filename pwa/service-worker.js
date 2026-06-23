@@ -1,11 +1,14 @@
 // service-worker.js -- caches the app shell so the controller still LOADS
 // offline (it just can't reach the bridge until back on the performance network).
 
-const CACHE_NAME = 'dspm-shell-v2';
+const CACHE_NAME = 'dspm-shell-v4';
 const SHELL_FILES = [
   './index.html',
   './app.js',
   './config.js',
+  './theme.css',
+  './qrcode.min.js',
+  './qr-share.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

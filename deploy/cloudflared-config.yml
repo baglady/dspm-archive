@@ -1,0 +1,35 @@
+# Cloudflare named-tunnel config for dspm-archive.
+#
+# Install location: /etc/cloudflared/config.yml  (system service)
+#                or ~/.cloudflared/config.yml     (per-user `cloudflared tunnel run`)
+#
+# One-time setup (see DEPLOY-DEBIAN.md for the full sequence):
+#   cloudflared tunnel login
+#   cloudflared tunnel create dspm
+#       -> prints a TUNNEL-UUID and writes <UUID>.json credentials
+#   cloudflared tunnel route dns dspm norns.yourdomain.com
+#   # edit this file with the UUID + credentials path + your hostname, then:
+#   sudo cloudflared service install
+#   sudo systemctl enable --now cloudflared
+#
+# cloudflared is OUTBOUND-only: it dials Cloudflare and never binds 80/443, so
+# it coexists with YunoHost's nginx without conflict.
+
+tunnel: <TUNNEL-UUID>
+credentials-file: /etc/cloudflared/<TUNNEL-UUID>.json
+
+ingress:
+  # Audience + performer PWA and the phone WebSocket all ride this one origin.
+  # The bridge upgrades the same port to WebSocket; cloudflared proxies WS
+  # automatically -- no extra config needed. resolveBridgeUrl() in pwa/app.js
+  # falls through to the page's own https host, so it picks wss:// here for free.
+  - hostname: norns.yourdomain.com
+    service: http://localhost:8081
+    originRequest:
+      # Give long-lived control sockets (a phone holding an XY pad) headroom so
+      # they aren't culled mid-show.
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+
+  # Everything else gets a 404 (required catch-all rule).
+  - service: http_status:404

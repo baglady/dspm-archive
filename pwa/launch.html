@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Starting the System — dspm</title>
+<meta name="theme-color" content="#0a0a0c">
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --card: #16161a;
+    --line: #2a2a30;
+    --accent: #ff3b30;
+    --warn: #f5a623;
+    --warn-soft: #2a2010;
+    --ok: #3ddc84;
+    --ok-soft: #112a1c;
+    --text: #e8e8ec;
+    --dim: #9a9aa2;
+    --mono: 'Courier New', monospace;
+    --body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--body); }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 22px 16px 48px; }
+  header h1 { font-family: var(--mono); font-size: 22px; letter-spacing: .04em; margin: 0 0 4px; text-transform: uppercase; }
+  header h1 .bars { color: var(--accent); }
+  header p { color: var(--dim); margin: 0 0 22px; font-size: 14px; }
+  .step {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px 16px; margin: 0 0 12px;
+  }
+  .step.cmd  { background: var(--warn-soft); border-color: var(--warn); }
+  .step.ok   { background: var(--ok-soft);   border-color: var(--ok); }
+  .num {
+    flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--accent); color: #2a0807; font-weight: 700;
+    font-family: var(--mono); font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step.cmd .num { background: var(--warn); color: #2a2010; }
+  .step.ok  .num { background: var(--ok);   color: #07291a; }
+  .step.note .num { background: var(--line); color: var(--text); }
+  .body h2 { margin: 2px 0 3px; font-size: 16px; font-weight: 700; }
+  .body p  { margin: 0; font-size: 13.5px; color: var(--dim); line-height: 1.45; }
+  .body code, .body pre { font-family: var(--mono); color: var(--text); background: #000; border-radius: 4px; }
+  .body code { padding: 1px 5px; }
+  .body pre { display: block; padding: 9px 11px; margin: 6px 0 4px; overflow-x: auto; font-size: 13px; color: var(--warn); }
+  .step.note { border-style: dashed; background: transparent; }
+  nav { margin-top: 26px; display: flex; gap: 10px; flex-wrap: wrap; }
+  nav a {
+    font-family: var(--mono); font-size: 13px; text-decoration: none;
+    color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+    padding: 9px 14px;
+  }
+  nav a.primary { border-color: var(--accent); color: var(--accent); }
+  footer { margin-top: 26px; color: var(--dim); font-size: 12px; font-family: var(--mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="bars">|||</span> Starting the System</h1>
+    <p>dspm-archive venue launch · top to bottom · don't skip a box.</p>
+  </header>
+
+  <div class="step">
+    <div class="num">1</div>
+    <div class="body"><h2>Power up</h2><p>norns + the laptop on the <strong>same WiFi</strong>.</p></div>
+  </div>
+
+  <div class="step">
+    <div class="num">2</div>
+    <div class="body"><h2>Pick the script on norns</h2><p>SELECT &rarr; <code>dspm_archive</code>.</p></div>
+  </div>
+
+  <div class="step">
+    <div class="num">3</div>
+    <div class="body"><h2>Get norns' IP address</h2><p>On norns: SYSTEM &rarr; WIFI (e.g. <code>10.0.0.35</code>).</p></div>
+  </div>
+
+  <div class="step">
+    <div class="num">4</div>
+    <div class="body"><h2>Open PowerShell in the repo</h2><p>The <code>dspm-archive</code> folder — the root, not <code>bridge\</code>.</p></div>
+  </div>
+
+  <div class="step cmd">
+    <div class="num">5</div>
+    <div class="body"><h2>Run the launch command</h2><pre>./start-venue.ps1 -NornsHost 10.0.0.35</pre><p>Swap in your real IP. Add <code>-Tunnel</code> to put it online with an audience QR.</p></div>
+  </div>
+
+  <div class="step">
+    <div class="num">6</div>
+    <div class="body"><h2>Read the printed URLs</h2><p>It lists the audience link and the performer link.</p></div>
+  </div>
+
+  <div class="step">
+    <div class="num">7</div>
+    <div class="body"><h2>Hand out the audience URL</h2><p>Keep the <code>performer.html?token=…</code> page to yourself.</p></div>
+  </div>
+
+  <div class="step ok">
+    <div class="num">8</div>
+    <div class="body"><h2>When done: press Ctrl-C</h2><p>Stops the bridge (and tunnel) and <strong>saves the session log</strong>. Don't just close the window.</p></div>
+  </div>
+
+  <div class="step note">
+    <div class="num">!</div>
+    <div class="body"><h2>First time only — once per laptop</h2><p>Run PowerShell as Administrator and allow port 8081 so phones can reach you (<code>New-NetFirewallRule … -LocalPort 8081</code>). Skip if already done.</p></div>
+  </div>
+
+  <nav>
+    <a class="primary" href="guests.html">Guest connect guide &rarr;</a>
+    <a href="index.html">Open the controller</a>
+  </nav>
+  <footer>norns live control · multi-user · dspm-archive</footer>
+</div>
+</body>
+</html>

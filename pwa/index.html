@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>barcode // control</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0a0a0c">
+<meta name="theme-color" content="#cdeafe">
 <style>
   :root {
     --bg: #0a0a0c;
@@ -59,6 +59,47 @@
   }
 
   #status.connected { color: #3ddc84; }
+  #status { cursor: pointer; }
+  #status.failed { color: #ff5a5a; }
+
+  /* Connection diagnostic -- normally hidden; appears when the control link
+     isn't open so a "page loaded but nothing happens" failure is visible. */
+  .diag-warn {
+    display: none;
+    margin: 8px 12px 0;
+    padding: 10px 12px;
+    border: 1px solid #ff5a5a;
+    border-radius: 8px;
+    background: rgba(255,90,90,0.12);
+    color: #ff8a8a;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+  .diag-warn.show { display: block; }
+  .diag-warn b { color: #ff5a5a; }
+
+  .diag {
+    display: none;
+    margin: 8px 12px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border, #333);
+    border-radius: 8px;
+    background: rgba(0,0,0,0.25);
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .diag.show { display: block; }
+  .diag-row { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+  .diag-k { text-transform: uppercase; letter-spacing: 0.05em; }
+  .diag-v { color: var(--text, #ddd); text-align: right; word-break: break-all; }
+  .diag-hint {
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    color: #bbb; line-height: 1.4;
+  }
 
   .connect-banner {
     display: flex;
@@ -230,6 +271,33 @@
     padding: 3px 4px;
     max-width: 38%;
   }
+
+  /* locked-pad axis legend (replaces the dropdowns on the audience build) */
+  .xy-axis-legend {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+
+  /* gentle RESET button */
+  .reset-group { text-align: center; }
+  .reset-btn {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 18px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms, color 120ms;
+  }
+  .reset-btn:active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+  .reset-btn.resetting { border-color: var(--accent); color: var(--accent); }
 
   .xy-pad-header select optgroup {
     background: var(--panel);
@@ -463,6 +531,7 @@
     box-shadow: 0 0 8px var(--accent);
   }
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
@@ -471,10 +540,19 @@
   <div id="status">connecting...</div>
 </header>
 
-<nav class="page-nav" id="page-nav" style="display:none">
+<nav class="page-nav" id="page-nav" style="display:flex">
   <span class="current">AUDIENCE</span>
-  <a id="nav-performer" href="performer.html">PERFORMER →</a>
+  <a id="nav-performer" href="performer.html" style="display:none">PERFORMER →</a>
+  <a href="archive.html">ARCHIVE</a>
+  <a href="#" id="nav-upload" onclick="openUploadModal();return false;">UPLOAD MEDIA</a>
+  <a href="#" onclick="qrShareOpen();return false;">QR</a>
+  <a href="https://merciful-jaguarundi.pikapod.net/blog/d-s-p-mystic/" target="_blank" rel="noopener">ABOUT ↗</a>
 </nav>
+
+<div id="diag-warn" class="diag-warn" onclick="toggleDiag()">
+  <b>⚠ NOT CONNECTED</b> — the page loaded but your taps aren't reaching the music yet. Tap for details.
+</div>
+<div id="diag" class="diag"></div>
 
 <div id="connect-banner" class="connect-banner">
   <div class="connect-text">
@@ -490,6 +568,9 @@
 
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="upload.js"></script>
+<script src="qrcode.min.js"></script>
+<script src="qr-share.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(() => {});

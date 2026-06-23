@@ -73,20 +73,125 @@ function sendOSC(path, args) {
   }
 }
 
+// Ask the bridge for a full-patch reset (see bridge-server.js panicReset). The
+// bridge ramps norns to a known-good baseline and broadcasts each step, so this
+// phone's UI (and everyone else's) re-syncs via the normal feedback path -- and
+// because the bridge drives norns directly, this phone never pins reset values
+// into the crowd average.
+function sendReset() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "reset" }));
+  }
+}
+
+// ---- connection diagnostics --------------------------------------------
+// "Page loaded but the controls did nothing" almost always means the control
+// WebSocket never opened -- sendOSC() silently no-ops unless ws is OPEN, so
+// every tap vanishes with no error the audience can see. You can't open
+// devtools on a stranger's phone at a show, so the state is surfaced on-screen:
+// a loud banner appears if we don't connect within a few seconds, and tapping
+// it (or the status pill) shows exactly what we're trying to reach. ws:// to a
+// LAN IP that never opens == the WiFi is blocking phone->laptop (AP isolation)
+// or port 8081 is closed -- the fix is to join via the QR / public tunnel URL.
+const diag = {
+  attempts: 0, everOpen: false, openedAt: 0,
+  lastCloseCode: null, lastCloseReason: "", state: "init",
+};
+let diagOpen = false, warnArmed = false;
+const diagPanel = document.getElementById("diag");
+const diagWarn  = document.getElementById("diag-warn");
+
+function fmtAgo(ts) {
+  if (!ts) return "never";
+  const s = Math.round((Date.now() - ts) / 1000);
+  return s < 1 ? "just now" : s + "s ago";
+}
+
+function diagHint() {
+  if (diag.state === "open") return "Connected — your taps are reaching the music.";
+  const insecureLan = proto === "ws://" && /^ws:\/\/(\d|localhost)/.test(bridgeUrl);
+  if (!diag.everOpen) {
+    if (insecureLan)
+      return "The page loaded but the control link never opened. The WiFi is probably blocking phone↔laptop traffic (AP / client isolation), or port " +
+             BRIDGE_PORT + " is closed. Fix: join via the QR / public link instead of this local address.";
+    return "The page loaded but the control link never opened. Check the bridge is running and reachable at the address above.";
+  }
+  return "Lost the control link and is retrying. If taps stop working, reload the page.";
+}
+
+function diagRow(k, v) {
+  const row = document.createElement("div"); row.className = "diag-row";
+  const ks = document.createElement("span"); ks.className = "diag-k"; ks.textContent = k;
+  const vs = document.createElement("span"); vs.className = "diag-v"; vs.textContent = v;
+  row.appendChild(ks); row.appendChild(vs);
+  return row;
+}
+
+function renderDiag() {
+  if (!diagPanel || !diagOpen) return;
+  diagPanel.textContent = "";
+  diagPanel.appendChild(diagRow("state", diag.state.toUpperCase()));
+  diagPanel.appendChild(diagRow("page", location.protocol + "//" + location.host));
+  diagPanel.appendChild(diagRow("bridge", bridgeUrl)); // textContent -- never innerHTML (?bridge= is user-supplied)
+  diagPanel.appendChild(diagRow("attempts", String(diag.attempts)));
+  diagPanel.appendChild(diagRow("connected", diag.everOpen ? fmtAgo(diag.openedAt) : "never"));
+  if (diag.lastCloseCode != null)
+    diagPanel.appendChild(diagRow("last close",
+      diag.lastCloseCode + (diag.lastCloseReason ? " " + diag.lastCloseReason : "")));
+  const hint = document.createElement("div"); hint.className = "diag-hint";
+  hint.textContent = diagHint();
+  diagPanel.appendChild(hint);
+}
+
+function toggleDiag(force) {
+  diagOpen = (typeof force === "boolean") ? force : !diagOpen;
+  if (diagPanel) diagPanel.classList.toggle("show", diagOpen);
+  renderDiag();
+}
+window.toggleDiag = toggleDiag; // referenced by the warning banner's inline onclick
+
+function setState(s) {
+  diag.state = s;
+  const label = { connecting: "connecting…", open: "connected",
+                  reconnecting: "reconnecting…", failed: "not connected" }[s] || s;
+  statusEl.textContent = label;
+  statusEl.classList.toggle("connected", s === "open");
+  statusEl.classList.toggle("failed", s === "failed" || s === "reconnecting");
+  const showWarn = s !== "open" && (s === "failed" || s === "reconnecting" || warnArmed);
+  if (diagWarn) diagWarn.classList.toggle("show", showWarn);
+  renderDiag();
+}
+
+if (statusEl) {
+  statusEl.style.cursor = "pointer";
+  statusEl.addEventListener("click", () => toggleDiag());
+}
+// Keep the "connected Xs ago" line live while the panel is open.
+setInterval(() => { if (diagOpen) renderDiag(); }, 1000);
+// Most LAN-isolation failures hang rather than error, so the browser can take
+// 10-30s to fire onclose. Surface the warning fast if we haven't connected.
+setTimeout(() => {
+  if (!diag.everOpen) { warnArmed = true; toggleDiag(true); setState(diag.state); }
+}, 4000);
+
 function connectWS() {
+  diag.attempts++;
+  setState(diag.everOpen ? "reconnecting" : "connecting");
   try {
     ws = new WebSocket(bridgeUrl);
   } catch (e) {
-    statusEl.textContent = "no bridge";
+    setState("failed");
     return;
   }
   ws.onopen = () => {
-    statusEl.textContent = "connected";
-    statusEl.classList.add("connected");
+    diag.everOpen = true;
+    diag.openedAt = Date.now();
+    setState("open");
   };
-  ws.onclose = () => {
-    statusEl.textContent = "reconnecting...";
-    statusEl.classList.remove("connected");
+  ws.onclose = (evt) => {
+    diag.lastCloseCode = evt && typeof evt.code === "number" ? evt.code : null;
+    diag.lastCloseReason = (evt && evt.reason) || "";
+    setState(diag.everOpen ? "reconnecting" : "failed");
     setTimeout(connectWS, 1500);
   };
   ws.onerror = () => {};
@@ -116,6 +221,59 @@ function el(tag, className, children) {
   return e;
 }
 
+const clamp01 = (n) => Math.min(1, Math.max(0, n));
+
+// Map a slider/pad position (0..1) to the value actually sent, given an
+// axis's min/max. min may be > max (inverted axis, e.g. the MOVEMENT sliders).
+function posToValue(pos, min, max) { return min + clamp01(pos) * (max - min); }
+function valueToPos(val, min, max) {
+  if (max === min) return 0;
+  return clamp01((val - min) / (max - min));
+}
+
+// rAF ease-in-out tween. stepFn(eased 0..1, raw 0..1) runs each frame; used by
+// the RESET button so controls glide home instead of snapping.
+function animate(durMs, stepFn) {
+  const start = performance.now();
+  function frame(now) {
+    const p = Math.min(1, (now - start) / durMs);
+    const eased = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    stepFn(eased, p);
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// Throttle OSC sends. The bridge only forwards continuous channels to norns at
+// ~25Hz and rate-limits each phone to 300 msg/s, so a pad/slider that drives
+// six voices at once (12 paths/move) must not fire on every pointermove. ~20Hz
+// is below the bridge tick yet imperceptible on a sweep; the trailing call
+// guarantees the final resting value is always delivered.
+function throttle(fn, ms) {
+  let last = 0, timer = null, lastArgs = null;
+  return function (...args) {
+    lastArgs = args;
+    const now = performance.now();
+    const wait = ms - (now - last);
+    if (wait <= 0) {
+      last = now;
+      if (timer) { clearTimeout(timer); timer = null; }
+      fn(...args);
+    } else if (!timer) {
+      timer = setTimeout(() => {
+        last = performance.now();
+        timer = null;
+        fn(...lastArgs);
+      }, wait);
+    }
+  };
+}
+
+// Every control registers a function here that smoothly returns it to its
+// default; the RESET button calls them all. See renderReset().
+const resetters = [];
+const SEND_THROTTLE_MS = 50; // ~20Hz per control (see throttle() note)
+
 // ============================================================
 // BUTTONS
 // ============================================================
@@ -142,6 +300,12 @@ function renderButtons(section) {
           active = !!args[0];
           btn.classList.toggle("active", active);
         }
+      });
+      // RESET returns the toggle to off (UI only; the bridge sends the actual
+      // reverse-off to norns as part of the full-patch reset)
+      resetters.push(() => {
+        active = false;
+        btn.classList.remove("active");
       });
     } else {
       // momentary
@@ -170,10 +334,19 @@ function renderSliders(section) {
   group.appendChild(el("h2", null, [section.title || "SLIDERS"]));
 
   for (const item of section.items) {
+    // Accept either a single `path` or a `paths` array, with an optional
+    // min/max range (the values sent at slider 0 and 1; min may exceed max for
+    // an inverted "drag right for more" feel). The slider itself always holds a
+    // 0..1 POSITION; we display that as a percentage so it reads intuitively.
+    const paths = item.paths || [item.path];
+    const min = item.min ?? 0;
+    const max = item.max ?? 1;
+    const defaultPos = valueToPos(item.default ?? 0.5, min, max);
+
     const block = el("div", "slider-block");
     const labelRow = el("div", "slider-label");
     const labelText = el("span", null, [item.label]);
-    const valText = el("span", "val", [String(item.default ?? 0.5)]);
+    const valText = el("span", "val", ["0%"]);
     labelRow.appendChild(labelText);
     labelRow.appendChild(valText);
 
@@ -182,23 +355,39 @@ function renderSliders(section) {
     input.min = "0";
     input.max = "1";
     input.step = "0.01";
-    input.value = String(item.default ?? 0.5);
+    input.value = String(defaultPos);
 
-    const update = (v) => {
-      valText.textContent = Number(v).toFixed(2);
-    };
-    update(input.value);
+    const updateLabel = (pos) => { valText.textContent = Math.round(pos * 100) + "%"; };
+    const send = throttle((pos) => {
+      const v = posToValue(pos, min, max);
+      for (const p of paths) sendOSC(p, [v]);
+    }, SEND_THROTTLE_MS);
+    updateLabel(defaultPos);
 
     input.addEventListener("input", () => {
-      update(input.value);
-      sendOSC(item.path, [parseFloat(input.value)]);
+      const pos = parseFloat(input.value);
+      updateLabel(pos);
+      send(pos);
     });
 
+    // feedback: track the device if it reports a value for our (first) path
     wsListeners.push((path, args) => {
-      if (path === item.path) {
-        input.value = args[0];
-        update(args[0]);
+      if (path === paths[0] && args != null) {
+        const pos = valueToPos(Number(args[0]), min, max);
+        input.value = String(pos);
+        updateLabel(pos);
       }
+    });
+
+    // RESET: glide back to the default position (UI only; the bridge drives
+    // norns and broadcasts each step, which re-syncs this slider too)
+    resetters.push((ms) => {
+      const from = parseFloat(input.value);
+      animate(ms, (e) => {
+        const pos = from + (defaultPos - from) * e;
+        input.value = String(pos);
+        updateLabel(pos);
+      });
     });
 
     block.appendChild(labelRow);
@@ -212,6 +401,88 @@ function renderSliders(section) {
 // ============================================================
 // XY PADS
 // ============================================================
+// A single locked XY pad: axes fixed to config, range-limited, no dropdowns.
+function buildLockedPad(item) {
+  const wrap = el("div", "xy-pad-wrap");
+  const ax = item.xAxis, ay = item.yAxis;
+  const xmin = ax.min ?? 0, xmax = ax.max ?? 1;
+  const ymin = ay.min ?? 0, ymax = ay.max ?? 1;
+
+  // header: title + a quiet, non-interactive axis legend (no <select>)
+  const header = el("div", "xy-pad-header");
+  header.appendChild(el("span", null, [item.label]));
+  header.appendChild(el("span", "xy-axis-legend", [ax.label + "  /  " + ay.label]));
+
+  const pad = el("div", "xy-pad");
+  const crosshair = el("div", "crosshair");
+  const xLabel = el("div", "axis-label x-label", [ax.label]);
+  const yLabel = el("div", "axis-label y-label", [ay.label]);
+  pad.appendChild(crosshair);
+  pad.appendChild(xLabel);
+  pad.appendChild(yLabel);
+
+  // posX / posY are 0..1 pad coordinates (posY=1 is the TOP of the pad).
+  let posX = valueToPos(ax.default ?? (xmin + xmax) / 2, xmin, xmax);
+  let posY = valueToPos(ay.default ?? (ymin + ymax) / 2, ymin, ymax);
+
+  const place = () => {
+    crosshair.style.left = (posX * 100) + "%";
+    crosshair.style.top = ((1 - posY) * 100) + "%";
+  };
+  const send = throttle(() => {
+    const xv = posToValue(posX, xmin, xmax);
+    const yv = posToValue(posY, ymin, ymax);
+    for (const p of ax.paths) sendOSC(p, [xv]);
+    for (const p of ay.paths) sendOSC(p, [yv]);
+  }, SEND_THROTTLE_MS);
+  place();
+
+  let dragging = false;
+  const setFromClient = (cx, cy) => {
+    const rect = pad.getBoundingClientRect();
+    posX = clamp01((cx - rect.left) / rect.width);
+    posY = 1 - clamp01((cy - rect.top) / rect.height); // top = max
+    place();
+    send();
+  };
+
+  pad.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    pad.setPointerCapture(e.pointerId);
+    setFromClient(e.clientX, e.clientY);
+  });
+  pad.addEventListener("pointermove", (e) => { if (dragging) setFromClient(e.clientX, e.clientY); });
+  pad.addEventListener("pointerup", () => { dragging = false; });
+  pad.addEventListener("pointercancel", () => { dragging = false; });
+
+  // feedback: move the crosshair (UI only) if norns reports a new value for
+  // whatever this pad drives, unless a finger is currently on it.
+  wsListeners.push((path, args) => {
+    if (dragging) return;
+    const v = Number(args && args[0]);
+    if (!Number.isFinite(v)) return;
+    if (ax.paths.includes(path)) { posX = valueToPos(v, xmin, xmax); place(); }
+    if (ay.paths.includes(path)) { posY = valueToPos(v, ymin, ymax); place(); }
+  });
+
+  // RESET: glide the crosshair back to default (UI only -- the bridge drives
+  // norns authoritatively, and re-sending here would re-pin the crowd average).
+  const defX = valueToPos(ax.default ?? (xmin + xmax) / 2, xmin, xmax);
+  const defY = valueToPos(ay.default ?? (ymin + ymax) / 2, ymin, ymax);
+  resetters.push((ms) => {
+    const fromX = posX, fromY = posY;
+    animate(ms, (e) => {
+      posX = fromX + (defX - fromX) * e;
+      posY = fromY + (defY - fromY) * e;
+      place();
+    });
+  });
+
+  wrap.appendChild(header);
+  wrap.appendChild(pad);
+  return wrap;
+}
+
 function renderXYPads(section) {
   if (!section || !section.items || section.items.length === 0) return null;
 
@@ -220,6 +491,14 @@ function renderXYPads(section) {
   const grid = el("div", "xy-grid");
 
   for (const item of section.items) {
+    // ---- Locked pad: fixed, range-limited axes, no dropdowns -----------
+    // Used by the audience build so nobody can repoint an axis at master
+    // output (and drag the show to silence). See config.js.
+    if (item.locked) {
+      grid.appendChild(buildLockedPad(item));
+      continue;
+    }
+
     const wrap = el("div", "xy-pad-wrap");
 
     // Flatten grouped options into a single ordered list, remembering
@@ -507,17 +786,43 @@ function renderGyro(cfg) {
 }
 
 // ============================================================
+// RESET  (full-patch panic -- gentle, not a norns restart)
+// Tells the bridge to smoothly ramp the WHOLE patch back to a known-good
+// baseline (sendReset) -- including params the audience can't normally touch --
+// and locally glides this phone's own controls home for instant feedback. The
+// loop buffer and any tape recording are untouched. See bridge panicReset().
+// ============================================================
+function renderReset() {
+  const ms = CONFIG.resetMs ?? 1200;
+  const group = el("section", "group reset-group");
+  const btn = el("button", "reset-btn", ["↺  RESET"]);
+  let busy = false;
+  btn.addEventListener("click", () => {
+    if (busy) return;
+    busy = true;
+    btn.classList.add("resetting");
+    sendReset();                       // bridge ramps norns + clears crowd state
+    for (const r of resetters) r(ms);  // local UI glide (no OSC sent)
+    setTimeout(() => { busy = false; btn.classList.remove("resetting"); }, ms + 200);
+  });
+  group.appendChild(btn);
+  return group;
+}
+
+// ============================================================
 // RENDER ALL
 // ============================================================
 const btnSection    = renderButtons(CONFIG.buttons);
 const sliderSection = renderSliders(CONFIG.sliders);
 const xySection     = renderXYPads(CONFIG.xyPads);
 const gyroSection   = renderGyro(CONFIG.gyro);
+const resetSection  = renderReset(); // after the others so resetters are registered
 
-if (btnSection)    app.appendChild(btnSection);
 if (xySection)     app.appendChild(xySection);
-if (gyroSection)   app.appendChild(gyroSection);
 if (sliderSection) app.appendChild(sliderSection);
+if (btnSection)    app.appendChild(btnSection);
+if (gyroSection)   app.appendChild(gyroSection);
+if (resetSection)  app.appendChild(resetSection);
 
 // ============================================================
 // PERFORMER ADMIN BAR  (kill-switch / dimmer)

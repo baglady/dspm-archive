@@ -1,0 +1,9 @@
+{
+  "name": "Test Kick",
+  "values": {
+    "tune": 0.6,
+    "decay": 0.9,
+    "punch": 1
+  },
+  "savedAt": "2026-06-20T05:32:25.946Z"
+}

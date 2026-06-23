@@ -3,3 +3,6 @@ node_modules/
 .DS_Store
 deploy/dspm-bridge.env
 tunnel-qr.png
+
+# generated performance recordings (large media, regenerated on the box)
+sessions/

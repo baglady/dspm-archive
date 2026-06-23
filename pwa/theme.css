@@ -1,0 +1,262 @@
+/* theme.css -- "Frutiger Aero" glass skin for the control / archive PWA.
+ *
+ * Glossy translucent glass, rounded corners, soft glows, bright sky/grass
+ * gradient -- the mid-2000s aqua aesthetic. This is a SKIN only: colour,
+ * type, shape. Include it AFTER each page's inline <style> so it wins the
+ * cascade; the three pages share CSS-variable names, so re-defining the
+ * variables re-themes everything, and the rules below add the glass on top.
+ *
+ * Deliberate perf choices for a venue rig full of cheap phones:
+ *   - glass is faked with translucent gradients + gloss highlights + soft
+ *     shadows rather than heavy backdrop-filter blur (which stutters and
+ *     drains battery), so it stays smooth.
+ *   - the font is a local humanist stack led by Segoe UI (the actual
+ *     Windows "Aero" typeface) -- authentic and 100% offline, no webfont.
+ */
+
+:root {
+  /* aero palette */
+  --sky:    #bfe6ff;
+  --aqua:   #2bb3c0;
+  --lime:   #b6e36a;
+  --grass:  #3a9d4e;
+  --deep:   #133b46;   /* readable dark text on light glass */
+
+  /* remap the pages' shared variables onto the aero palette */
+  --bg:         #cdeafe;
+  --panel:      rgba(255, 255, 255, 0.55);
+  --panel2:     rgba(255, 255, 255, 0.40);
+  --line:       rgba(255, 255, 255, 0.65);
+  --accent:     #1f8a4c;   /* accent-as-text: fresh green, high contrast */
+  --accent-dim: #d6f29a;   /* accent-as-fill: pale lime */
+  --text:       #133b46;
+  --text-dim:   #5a7884;
+  --green:      #1f8a4c;
+  --green-dim:  #d9f3d0;
+
+  /* type -- Segoe UI is the Aero font; all local, no webfont load */
+  --font-display: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-body:    "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:    "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --fd:           "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --fb:           "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---- bright sky/grass backdrop ---------------------------------------- */
+html, body {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 45%),
+    linear-gradient(168deg, #c7ecff 0%, #d8f3ef 42%, #e6f7cf 72%, #cdeeb0 100%)
+    fixed;
+  letter-spacing: 0.01em;
+}
+
+/* ---- glass panels & cards --------------------------------------------- */
+section.group,
+.admin-bar {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.30) 48%, rgba(255,255,255,0.45) 100%);
+  border: 1px solid rgba(255,255,255,0.85);
+  border-radius: 18px;
+  box-shadow:
+    0 10px 28px rgba(20, 80, 110, 0.18),
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -10px 24px rgba(255,255,255,0.25);
+}
+
+/* ---- header & nav (frosted glass strip) ------------------------------- */
+header {
+  background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.25));
+  border-bottom: 1px solid rgba(255,255,255,0.8);
+  box-shadow: 0 2px 10px rgba(20,80,110,0.12);
+}
+
+.page-nav {
+  background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.2));
+  border-bottom: 1px solid rgba(255,255,255,0.7);
+}
+.page-nav a, .page-nav span { border-radius: 10px; }
+.page-nav .current {
+  color: var(--deep);
+  background: linear-gradient(180deg, #eafbc4, #b6e36a);
+  border-bottom: none;
+  box-shadow: 0 2px 6px rgba(58,157,78,0.35), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+#status.connected, #ws-status.live { color: var(--grass); }
+
+/* ---- glossy aqua/lime buttons ----------------------------------------- */
+.btn,
+.gyro-enable-btn,
+.qrs-close,
+.hide-banner-btn {
+  border: 1px solid rgba(255,255,255,0.85);
+  border-radius: 12px;
+  color: var(--deep);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.55) 50%, rgba(210,235,245,0.7) 51%, rgba(190,225,240,0.8) 100%);
+  box-shadow:
+    0 4px 10px rgba(20,80,110,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+  transition: box-shadow 90ms ease, transform 90ms ease, background 90ms ease;
+}
+.hide-banner-btn { border-radius: 50%; }
+
+.btn.active,
+.btn:active,
+.btn.momentary:active,
+.gyro-enable-btn.active,
+.qrs-close:active,
+.hide-banner-btn:active {
+  color: var(--deep);
+  background:
+    linear-gradient(180deg, #f3ffd6 0%, #d6f29a 50%, #b6e36a 51%, #9fd64f 100%);
+  border-color: rgba(255,255,255,0.95);
+  box-shadow:
+    0 2px 8px rgba(58,157,78,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+  transform: translateY(1px);
+}
+
+/* ---- sliders: glossy bead on a glass track ---------------------------- */
+input[type=range]::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(180,210,225,0.6));
+  border: 1px solid rgba(255,255,255,0.8);
+  box-shadow: inset 0 1px 3px rgba(20,80,110,0.25);
+}
+input[type=range]::-webkit-slider-thumb {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  margin-top: -9px;
+  background:
+    radial-gradient(circle at 50% 30%, #ffffff 0%, #d6f29a 45%, #8fcf3f 100%);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: 0 2px 6px rgba(58,157,78,0.45), inset 0 1px 1px rgba(255,255,255,0.9);
+}
+
+/* ---- XY pads: glass surface, glossy crosshair ------------------------- */
+.xy-pad {
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 16px;
+  background:
+    repeating-linear-gradient(90deg, rgba(20,80,110,0.10) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(0deg, rgba(20,80,110,0.10) 0 1px, transparent 1px 25%),
+    linear-gradient(180deg, rgba(255,255,255,0.55), rgba(210,235,245,0.45));
+  box-shadow: inset 0 2px 10px rgba(20,80,110,0.15), 0 8px 22px rgba(20,80,110,0.15);
+}
+.xy-pad .crosshair {
+  background: radial-gradient(circle at 50% 30%, #ffffff 0%, #b6e36a 50%, #6fc02f 100%);
+  border: 2px solid rgba(255,255,255,0.95);
+  box-shadow: 0 0 14px rgba(120,200,80,0.8), 0 2px 6px rgba(58,157,78,0.5);
+}
+.xy-pad-header select,
+.gyro-axis-select {
+  border: 1px solid rgba(255,255,255,0.85);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.55));
+}
+
+/* ---- gyro tilt -------------------------------------------------------- */
+.gyro-track {
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(180,210,225,0.6));
+  border: 1px solid rgba(255,255,255,0.8);
+}
+.gyro-dot {
+  background: radial-gradient(circle at 50% 30%, #ffffff 0%, #b6e36a 50%, #6fc02f 100%);
+  border: 2px solid rgba(255,255,255,0.95);
+  box-shadow: 0 0 10px rgba(120,200,80,0.8);
+}
+.gyro-center-mark { background: rgba(20,80,110,0.4); }
+
+/* ---- connect banner --------------------------------------------------- */
+.connect-banner {
+  background: linear-gradient(180deg, rgba(255,255,255,0.65), rgba(255,255,255,0.3));
+  border-bottom: 1px solid rgba(255,255,255,0.7);
+}
+
+/* ---- archive: session list / cards ------------------------------------ */
+.session-item { border-radius: 10px; }
+.session-item.active {
+  border-left: 3px solid var(--grass);
+  background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.25));
+}
+.session-title { color: var(--grass); }
+
+/* ---- QR share component ----------------------------------------------- */
+.qrs-badge {
+  border: 1px solid rgba(255,255,255,0.85);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
+  box-shadow: 0 8px 22px rgba(20,80,110,0.22), inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.qrs-badge img { border-radius: 8px; }
+.qrs-card {
+  border: 1px solid rgba(255,255,255,0.9);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(235,247,255,0.85));
+  box-shadow: 0 18px 50px rgba(20,80,110,0.35), inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.qrs-card img { border-radius: 12px; }
+.qrs-modal { background: radial-gradient(120% 100% at 50% 0%, rgba(40,120,150,0.55), rgba(10,40,55,0.78)); }
+
+/* ---- upload modal -------------------------------------------------------- */
+.upload-overlay {
+  background: radial-gradient(120% 100% at 50% 0%, rgba(40,120,150,0.45), rgba(10,40,55,0.68));
+}
+.upload-modal {
+  background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(235,247,255,0.82) 100%);
+  border: 1px solid rgba(255,255,255,0.9);
+  border-radius: 18px;
+  box-shadow:
+    0 18px 50px rgba(20,80,110,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.upload-modal h2 {
+  border-bottom: 1px solid rgba(20,80,110,0.12);
+}
+.upload-select {
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(220,240,255,0.7));
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 3px rgba(20,80,110,0.12);
+  color: var(--deep);
+}
+.upload-drop {
+  background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(210,235,245,0.35));
+  border: 1.5px dashed rgba(20,80,110,0.25);
+  border-radius: 10px;
+}
+.upload-drop.drag-over {
+  border-color: var(--grass);
+  background: rgba(58,157,78,0.07);
+  color: var(--grass);
+}
+.upload-file-item {
+  background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(220,240,255,0.6));
+  border: 1px solid rgba(255,255,255,0.85);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(20,80,110,0.10);
+}
+.upload-progress-bar {
+  background: rgba(20,80,110,0.12);
+  border-radius: 3px;
+}
+.upload-progress-fill {
+  background: linear-gradient(90deg, var(--aqua), var(--grass));
+}
+.upload-submit {
+  background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 50%, rgba(210,235,245,0.65) 51%, rgba(185,220,240,0.75) 100%);
+  border: 1px solid rgba(255,255,255,0.85);
+  border-radius: 12px;
+  color: var(--deep);
+  box-shadow: 0 4px 10px rgba(20,80,110,0.16), inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.upload-submit:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f3ffd6 0%, #d6f29a 50%, #b6e36a 51%, #9fd64f 100%);
+  box-shadow: 0 2px 8px rgba(58,157,78,0.4), inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.upload-msg.ok  { color: var(--grass); }
+.upload-msg.err { color: #c0392b; }

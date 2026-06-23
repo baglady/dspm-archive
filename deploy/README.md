@@ -9,6 +9,7 @@ websocket on one port (`BRIDGE_WS_PORT`, default 8081) and log every session.
 | **1. Laptop bridge** | Windows / mac / Linux laptop on the LAN | `start-venue.ps1` / `start-venue.sh` | Shows now; quickest to stand up |
 | **2. Opal + Pi** | Pi behind the Opal, always-on | `systemd` unit in this folder | The permanent venue "brain", no laptop |
 | **3. VS Code / cloud** | code-server pod (PikaPods) | `start.sh` | Editing in the browser, previewing the UI, demos — **no norns** |
+| **4. Debian + Cloudflare tunnel** | always-on Debian box (alongside YunoHost) | `systemd` unit + named tunnel — [../DEPLOY-DEBIAN.md](../DEPLOY-DEBIAN.md) | Permanent public page at a real domain; drives a **local** norns (remote norns later) |
 
 `NORNS_HOST` is the only thing that changes between them: norns' IP on whatever
 network the bridge shares with it. (Profile 3 has no norns, so OSC just goes

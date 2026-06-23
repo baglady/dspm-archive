@@ -6,7 +6,11 @@
 #   NORNS_HOST=192.168.8.20 ./start-venue.sh
 #   ./start-venue.sh 192.168.8.20            # norns IP as first arg also works
 #
-# Env overrides: BRIDGE_WS_PORT (default 8081), NORNS_PORT (default 10111).
+# Env overrides: BRIDGE_WS_PORT (default 8081), NORNS_PORT (default 10111),
+#   BRIDGE_ADMIN_TOKEN (default "dspm"), NICE (default 10 on Pi, 0 elsewhere).
+#
+# On Patchbox OS / Pi 2 W, NICE=10 keeps audio (JACK/arecord) the CPU
+# priority over the bridge. Set NICE=0 if you're not running audio alongside.
 set -eu
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -20,6 +24,16 @@ fi
 export NORNS_HOST
 export BRIDGE_WS_PORT="${BRIDGE_WS_PORT:-8081}"
 export NORNS_PORT="${NORNS_PORT:-10111}"
+export BRIDGE_ADMIN_TOKEN="${BRIDGE_ADMIN_TOKEN:-dspm}"
+
+# On a Pi detect automatically; override with NICE=0 to disable.
+if [ -z "${NICE:-}" ]; then
+  if grep -qi "raspberry\|patchbox" /proc/device-tree/model 2>/dev/null; then
+    NICE=10
+  else
+    NICE=0
+  fi
+fi
 
 # locate node: PATH first, then an nvm install
 NODE="$(command -v node || true)"
@@ -42,9 +56,15 @@ if [ -z "$IPS" ]; then
 fi
 for ip in $IPS; do echo "    http://$ip:${BRIDGE_WS_PORT}/"; done
 [ -z "$IPS" ] && echo "    http://<this-host-ip>:${BRIDGE_WS_PORT}/"
+echo ""
+for ip in $IPS; do
+  echo "Performer page:  http://$ip:${BRIDGE_WS_PORT}/performer.html?token=${BRIDGE_ADMIN_TOKEN}"
+  break
+done
 echo "Forwarding OSC to norns at ${NORNS_HOST}:${NORNS_PORT}"
+[ "$NICE" -gt 0 ] && echo "Running at nice +${NICE} (audio gets CPU priority)"
 echo "Ctrl-C stops the bridge and finalizes the session log."
 echo ""
 
 cd "$BRIDGE"
-exec "$NODE" bridge-server.js
+exec nice -n "$NICE" "$NODE" bridge-server.js

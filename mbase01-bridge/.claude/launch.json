@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mbase01-bridge",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["bridge/bridge-server.js"],
+      "port": 8083
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pwa",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", "pwa", "-p", "8080", "-c-1"],
+      "port": 8080
+    },
+    {
+      "name": "mbase01-bridge",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": ["bridge-server.js"],
+      "cwd": "mbase01-bridge/bridge",
+      "port": 8083
+    },
+    {
+      "name": "octatrack-midi-control",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": ["bridge-server.js"],
+      "cwd": "octatrack-midi-control/bridge",
+      "port": 8082
+    }
+  ]
+}

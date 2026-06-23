@@ -1,4 +1,4 @@
-# start-venue.ps1 -- run the dspm-archive bridge on a Windows laptop at the show.
+﻿# start-venue.ps1 -- run the dspm-archive bridge on a Windows laptop at the show.
 #
 # The bridge is the "processor": it serves the audience PWA AND the control
 # WebSocket on one port (8081), averages every phone's input on a fixed tick,
@@ -61,7 +61,7 @@ if ($ips.Count -gt 0) {
   Write-Host ""
 }
 
-# ---- optional: public Cloudflare quick tunnel + audience QR ---------------
+# ---- optional: named Cloudflare tunnel -> dspm.hetti.be -------------------
 # cloudflared runs in the background; the bridge stays in the foreground below
 # so Ctrl-C still reaches it and finalizes the session log. The tunnel is
 # stopped in the finally block when the bridge exits.
@@ -76,46 +76,49 @@ if ($Tunnel) {
       Write-Host "WARNING: going public with the default admin token 'dspm' -- it's guessable." -ForegroundColor Red
       Write-Host "  Re-run with  -AdminToken `"something-long`"  to protect the performer page / kill-switch." -ForegroundColor DarkGray
     }
-    $outLog = Join-Path $env:TEMP "dspm-cloudflared.out.log"
     $errLog = Join-Path $env:TEMP "dspm-cloudflared.err.log"
-    Remove-Item $outLog, $errLog -Force -ErrorAction SilentlyContinue
-    Write-Host "Opening Cloudflare quick tunnel -> http://localhost:$Port ..." -ForegroundColor Cyan
+    Remove-Item $errLog -Force -ErrorAction SilentlyContinue
+    Write-Host "Opening Cloudflare tunnel -> https://dspm.hetti.be ..." -ForegroundColor Cyan
+    # Force IPv4 + HTTP/2: some venue/home networks have a broken IPv6 path or
+    # block QUIC (UDP/7844), which makes the tunnel's TLS control stream fail
+    # ("ssl handshake failed" / "control stream encountered a failure"). HTTP/2
+    # rides TCP/443 and IPv4 avoids the bad v6 edge -- this connects reliably.
+    # Run from ~/.cloudflared so it always reads that config.yml + credentials.
     $cfProc = Start-Process -FilePath $cf.Source `
-      -ArgumentList @("tunnel", "--url", "http://localhost:$Port") `
+      -ArgumentList @("tunnel", "--protocol", "http2", "--edge-ip-version", "4", "run", "dspm") `
+      -WorkingDirectory (Join-Path $env:USERPROFILE ".cloudflared") `
       -NoNewWindow -PassThru `
-      -RedirectStandardOutput $outLog -RedirectStandardError $errLog
+      -RedirectStandardError $errLog
 
-    # wait for the random trycloudflare URL to appear (up to ~30s)
-    $pub = $null
-    for ($i = 0; $i -lt 60 -and -not $pub; $i++) {
+    # wait for tunnel to register connections (up to ~15s)
+    $ready = $false
+    for ($i = 0; $i -lt 30 -and -not $ready; $i++) {
       Start-Sleep -Milliseconds 500
-      $hit = Select-String -Path $errLog, $outLog -Pattern "https://[a-z0-9-]+\.trycloudflare\.com" -ErrorAction SilentlyContinue |
+      $hit = Select-String -Path $errLog -Pattern "Registered tunnel connection" -ErrorAction SilentlyContinue |
         Select-Object -First 1
-      if ($hit) { $pub = $hit.Matches[0].Value }
+      if ($hit) { $ready = $true }
     }
 
-    if (-not $pub) {
-      Write-Host "Couldn't get a tunnel URL (timed out); continuing LAN-only. Check $errLog" -ForegroundColor Yellow
-      if ($cfProc -and -not $cfProc.HasExited) { Stop-Process -Id $cfProc.Id -Force }
-      $cfProc = $null
-    } else {
-      Write-Host ""
-      Write-Host "============== PUBLIC (anyone online) ==============" -ForegroundColor Green
-      Write-Host ("  audience:  {0}/" -f $pub) -ForegroundColor Green
-      Write-Host ("  performer: {0}/performer.html?token={1}" -f $pub, $AdminToken) -ForegroundColor Yellow
-      Write-Host "===================================================" -ForegroundColor Green
-      # QR encodes the AUDIENCE url only -- never the performer token.
-      $qr = Join-Path $root "tunnel-qr.png"
-      try {
-        $enc = [uri]::EscapeDataString("$pub/")
-        Invoke-WebRequest -Uri "https://api.qrserver.com/v1/create-qr-code/?size=${QrSize}x${QrSize}&data=$enc" -OutFile $qr
-        Write-Host "Audience QR saved + opening: $qr" -ForegroundColor Cyan
-        Start-Process $qr
-      } catch {
-        Write-Host "QR generation failed ($($_.Exception.Message)). The URL above still works." -ForegroundColor Yellow
-      }
-      Write-Host ""
+    $pub = "https://dspm.hetti.be"
+    if (-not $ready) {
+      Write-Host "Tunnel may still be connecting — check $errLog if the URL doesn't work." -ForegroundColor Yellow
     }
+    Write-Host ""
+    Write-Host "============== PUBLIC (anyone online) ==============" -ForegroundColor Green
+    Write-Host ("  audience:  {0}/" -f $pub) -ForegroundColor Green
+    Write-Host ("  performer: {0}/performer.html?token={1}" -f $pub, $AdminToken) -ForegroundColor Yellow
+    Write-Host "===================================================" -ForegroundColor Green
+    # QR encodes the AUDIENCE url only -- never the performer token.
+    $qr = Join-Path $root "tunnel-qr.png"
+    try {
+      $enc = [uri]::EscapeDataString("$pub/")
+      Invoke-WebRequest -Uri "https://api.qrserver.com/v1/create-qr-code/?size=${QrSize}x${QrSize}&data=$enc" -OutFile $qr
+      Write-Host "Audience QR saved + opening: $qr" -ForegroundColor Cyan
+      Start-Process $qr
+    } catch {
+      Write-Host "QR generation failed ($($_.Exception.Message)). The URL above still works." -ForegroundColor Yellow
+    }
+    Write-Host ""
   }
 }
 

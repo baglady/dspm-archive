@@ -99,64 +99,94 @@ const ALL_AXIS_GROUPS = [
   ]},
 ];
 
+// ============================================================
+// AUDIENCE CONFIG  (dspm3 — idiotproof build)
+// ------------------------------------------------------------
+// Deliberately limited so ANYONE — a kid, someone's grandparent — can play
+// without ever killing the sound. Nothing here can silence the mix, wipe the
+// loop, or stop playback:
+//   * NO master / pre / rec level     (can't turn the sound down to nothing)
+//   * NO recording / clear-buffer     (can't erase the loop)
+//   * filter never closes all the way (BRIGHT axis floored well above silence)
+//   * pitch/movement ranges kept tight so corners still sound musical
+// Axes are LOCKED (no dropdowns to get lost in). The full unrestricted control
+// surface still lives on performer.html — this only restricts audience phones.
+// ============================================================
 const CONFIG = {
 
-  // --- Toggle / momentary buttons -------------------------------------
+  // --- One safe, fun transport toggle ----------------------------------
+  // RECORDING + CLEAR BUF are vibe-killers, so they're performer-only now.
   buttons: {
-    title: "TRANSPORT",
+    title: "PLAY",
     items: [
-      { label: "RECORDING", path: "/param/recording", type: "toggle" },
-      { label: "CLEAR BUF", path: "/param/clear", type: "momentary" },
       { label: "REVERSE", path: "/param/reverse", type: "toggle" },
-      { label: "LFO SYNC", path: "/param/quantize", type: "toggle" },
     ],
   },
 
-  // --- Sliders ----------------------------------------------------------
-  sliders: {
-    title: "LEVELS",
-    items: [
-      { label: "MASTER",     path: "/barcode/output_level", default: 0.8 },
-      { label: "PRE LEVEL",  path: "/barcode/pre_level",  default: 1.0 },
-      { label: "REC LEVEL",  path: "/barcode/rec_level",  default: 1.0 },
-      { label: "FILTER CUTOFF", path: "/param/filter_frequency", default: 1.0 },
-      { label: "RESONANCE", path: "/param/filter_reso", default: 0.2 },
-    ],
-  },
-
-  // --- XY Pads ------------------------------------------------------------
-  // Both pads share the full ALL_AXIS_GROUPS list (every per-voice bias/LFO
-  // param, plus global levels/filter) -- so each pad's X and Y dropdowns can
-  // be pointed at ANY parameter, independently.
+  // --- XY Pads (the main attraction) -----------------------------------
+  // locked:true  -> axes are fixed, no dropdowns. Each axis is range-limited
+  // via min/max (the value sent at the two ends) so even the corners stay
+  // musical. `default` is the resting value used by the RESET button.
   xyPads: {
-    title: "XY CONTROL",
+    title: "TOUCH PADS",
     items: [
       {
-        label: "PAD A — TEXTURE MORPH",
-        axisGroups: ALL_AXIS_GROUPS,
-        defaultXPath: "/barcode/v1/rate",
-        defaultYPath: "/barcode/v1/level",
+        label: "TONE",
+        locked: true,
+        // left → right opens the filter; floored at 0.35 so it never mutes.
+        xAxis: { label: "DARK · BRIGHT", paths: ["/param/filter_frequency"],
+                 min: 0.35, max: 1.0, default: 0.85 },
+        // bottom → top adds sparkle; capped before it screams.
+        yAxis: { label: "SPARKLE", paths: ["/param/filter_reso"],
+                 min: 0.0, max: 0.5, default: 0.18 },
       },
       {
-        label: "PAD B — LFO CHAOS",
-        axisGroups: ALL_AXIS_GROUPS,
-        defaultXPath: "/barcode/v3/rate_lfo",
-        defaultYPath: "/barcode/v3/pan_lfo",
+        label: "SWIRL",
+        locked: true,
+        // left → right sweeps all six voices across the stereo field.
+        xAxis: { label: "LEFT · RIGHT",
+                 paths: ["/barcode/v1/pan","/barcode/v2/pan","/barcode/v3/pan",
+                         "/barcode/v4/pan","/barcode/v5/pan","/barcode/v6/pan"],
+                 min: 0.0, max: 1.0, default: 0.5 },
+        // bottom → top nudges pitch/speed of all voices together. Range kept
+        // narrow (0.3..0.7) so it colours the sound without derailing the groove.
+        yAxis: { label: "LOWER · HIGHER",
+                 paths: ["/barcode/v1/rate","/barcode/v2/rate","/barcode/v3/rate",
+                         "/barcode/v4/rate","/barcode/v5/rate","/barcode/v6/rate"],
+                 min: 0.3, max: 0.7, default: 0.5 },
       },
     ],
   },
 
-  // --- Gyro tilt ----------------------------------------------------------
-  // Opt-in; iOS requires a permission tap so this is never active by default.
-  // beta  = pitch (tilt forward/back, -90°..90°) → assigned OSC channel
-  // gamma = roll  (tilt left/right,   -90°..90°) → assigned OSC channel
-  // deadzoneDeg: ignore tilt within ±N degrees of flat (avoids table-drift).
-  // rateHz: how often to send while active (bridge crowd-averages like touch).
-  gyro: {
-    deadzoneDeg: 8,
-    rateHz: 15,
-    betaDefaultPath:  "/param/filter_frequency",
-    gammaDefaultPath: "/barcode/output_level",
+  // --- Movement sliders (pure motion, can't mute) ----------------------
+  // These set how lively the built-in pan / pitch wobble is. min>max on
+  // purpose: slider LEFT = calm (slow LFO), slider RIGHT = lively (fast LFO),
+  // so "drag right for more" reads intuitively. Capped so it stays a vibe,
+  // never a seizure.
+  sliders: {
+    title: "MOVEMENT",
+    items: [
+      { label: "WOBBLE",
+        paths: ["/barcode/v1/pan_lfo","/barcode/v2/pan_lfo","/barcode/v3/pan_lfo",
+                "/barcode/v4/pan_lfo","/barcode/v5/pan_lfo","/barcode/v6/pan_lfo"],
+        min: 0.95, max: 0.10, default: 0.85 },
+      { label: "SHIMMER",
+        paths: ["/barcode/v1/rate_lfo","/barcode/v2/rate_lfo","/barcode/v3/rate_lfo",
+                "/barcode/v4/rate_lfo","/barcode/v5/rate_lfo","/barcode/v6/rate_lfo"],
+        min: 0.95, max: 0.25, default: 0.88 },
+    ],
   },
+
+  // --- Gentle reset -----------------------------------------------------
+  // The RESET button ramps every audience-touchable control back to its
+  // `default` over resetMs, smoothly (NOT a norns restart — the loop, the
+  // master level, and the performer's settings are all untouched). Built
+  // automatically from the controls above; see app.js renderReset().
+  resetMs: 1400,
+
+  // --- Gyro tilt: OFF for the audience build ---------------------------
+  // One less thing to explain, and its old defaults could tilt master output
+  // down to silence. Performers don't use it.
+  gyro: null,
 
 };

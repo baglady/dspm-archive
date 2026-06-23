@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>barcode // archive</title>
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --panel: #141418;
+    --panel2: #1c1c22;
+    --line: #2a2a30;
+    --accent: #ff3b30;
+    --accent-dim: #5a1512;
+    --text: #e8e8ec;
+    --text-dim: #8a8a92;
+    --green: #3ddc84;
+    --font-mono: 'Courier New', monospace;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    letter-spacing: 0.15em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  header h1 .bars { color: var(--accent); letter-spacing: 0.05em; }
+  header h1 .dim { color: var(--text-dim); }
+
+  #ws-status {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+  }
+  #ws-status.live { color: var(--green); }
+
+  .layout {
+    display: flex;
+    height: calc(100vh - 84px);
+  }
+
+  .page-nav {
+    display: flex;
+    border-bottom: 1px solid var(--line);
+    padding: 0 16px;
+    flex-shrink: 0;
+  }
+  .page-nav a, .page-nav span {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 8px 12px 8px 0;
+    margin-right: 4px;
+  }
+  .page-nav a:hover { color: var(--text); }
+  .page-nav .current { color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+  /* ---- session list ---- */
+  #session-list {
+    width: 220px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    padding: 12px 0;
+  }
+
+  .list-heading {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 0 14px 10px;
+  }
+
+  .session-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: background 80ms, border-color 80ms;
+  }
+  .session-item:hover { background: var(--panel); }
+  .session-item.active { background: var(--panel); border-left-color: var(--accent); }
+
+  .session-title {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    margin-bottom: 2px;
+  }
+
+  .session-date {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text);
+    letter-spacing: 0.04em;
+  }
+
+  .session-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* ---- viewer ---- */
+  #viewer {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #empty-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  #empty-state .big { font-size: 32px; opacity: 0.2; }
+
+  /* ---- video ---- */
+  #video-wrap {
+    background: #000;
+    position: relative;
+    display: none;
+  }
+  #video-wrap.has-video { display: block; }
+
+  #main-video {
+    width: 100%;
+    display: block;
+    max-height: 45vh;
+    object-fit: contain;
+    background: #000;
+  }
+
+  .video-offset-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+  .video-offset-row input[type=number] {
+    width: 64px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 3px 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    border-radius: 3px;
+  }
+
+  /* ---- timeline ---- */
+  #timeline-wrap {
+    padding: 12px 12px 0;
+    display: none;
+  }
+  #timeline-wrap.ready { display: block; }
+
+  .tl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  #timeline-canvas {
+    width: 100%;
+    height: 140px;
+    cursor: crosshair;
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+  }
+
+  #tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text);
+    line-height: 1.6;
+    z-index: 100;
+    display: none;
+    max-width: 200px;
+  }
+
+  /* ---- controls ---- */
+  #controls {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--line);
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  #controls.ready { display: flex; }
+
+  .ctrl-btn {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 80ms, border-color 80ms;
+    user-select: none;
+  }
+  .ctrl-btn:hover { background: var(--panel2); border-color: var(--text-dim); }
+  .ctrl-btn.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+
+  #time-display {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: 0.08em;
+    min-width: 100px;
+  }
+
+  .scrub-track {
+    flex: 1;
+    min-width: 120px;
+    height: 6px;
+    background: var(--line);
+    border-radius: 3px;
+    position: relative;
+    cursor: pointer;
+  }
+  .scrub-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    pointer-events: none;
+    width: 0%;
+  }
+  .scrub-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #fff;
+    pointer-events: none;
+    left: 0%;
+  }
+
+  .remix-btn {
+    background: #123d1c;
+    border: 1px solid var(--green);
+    color: #d6ffe4;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .remix-btn:hover { background: #1a5228; }
+
+  /* ---- legend ---- */
+  #legend {
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px 14px;
+  }
+  #legend.ready { display: flex; }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 3px 7px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    transition: border-color 80ms, color 80ms;
+    user-select: none;
+  }
+  .legend-item:hover { border-color: var(--line); }
+  .legend-item.on { color: var(--text); border-color: var(--line); }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ---- editor ---- */
+  #editor { display: none; padding: 4px 12px 28px; }
+  #editor.ready { display: block; }
+  .ed-section { border-top: 1px solid var(--line); padding: 14px 0 4px; }
+  .ed-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px;
+  }
+  .ed-btn {
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+    padding: 6px 10px; border-radius: 4px; cursor: pointer; text-transform: uppercase;
+  }
+  .ed-btn:hover { background: var(--panel2); border-color: var(--text-dim); }
+  .ed-btn.go { background: #123d1c; border-color: var(--green); color: #d6ffe4; }
+  .ed-btn.go:hover { background: #1a5228; }
+  .ed-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* track lanes */
+  .ed-track {
+    display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    font-family: var(--font-mono); font-size: 11px;
+  }
+  .ed-track .name { width: 150px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ed-track .badge {
+    font-size: 9px; padding: 1px 5px; border-radius: 3px; letter-spacing: 0.08em;
+    text-transform: uppercase; flex-shrink: 0;
+  }
+  .badge.master { background: #2a2a55; color: #aab; }
+  .badge.auto { background: #143d22; color: #6fdc94; }
+  .badge.manual { background: #4a2a12; color: #f0a050; }
+  .ed-lane {
+    flex: 1; height: 22px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 4px; position: relative; overflow: hidden; min-width: 80px;
+  }
+  .ed-lane .clipbar {
+    position: absolute; top: 2px; bottom: 2px; background: #2e6fb0aa;
+    border: 1px solid #4a90d0; border-radius: 3px;
+  }
+  .ed-lane .zero { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--accent); }
+  .ed-track input[type=number] {
+    width: 70px; background: var(--bg); border: 1px solid var(--line); color: var(--text);
+    padding: 3px 5px; font-family: var(--font-mono); font-size: 11px; border-radius: 3px;
+  }
+  .ed-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+  .ed-row input[type=number] {
+    width: 84px; background: var(--bg); border: 1px solid var(--line); color: var(--text);
+    padding: 4px 6px; font-family: var(--font-mono); font-size: 11px; border-radius: 3px;
+  }
+  .ed-chip {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 3px; padding: 3px 7px; font-size: 10px;
+    font-family: var(--font-mono); color: var(--text); }
+  .ed-chip b { color: var(--accent); }
+  .ed-chip .x { cursor: pointer; color: var(--text-dim); }
+  .ed-jobs { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .ed-job {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ed-prog { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; max-width: 220px; }
+  .ed-prog > i { display: block; height: 100%; background: var(--green); width: 0%; }
+  .ed-job.err { color: var(--accent); }
+  .ed-render a {
+    color: var(--green); text-decoration: none; font-family: var(--font-mono); font-size: 11px;
+  }
+  .ed-render a:hover { text-decoration: underline; }
+  .ed-note { font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); margin-top: 6px; }
+
+  /* ---- responsive ---- */
+  @media (max-width: 600px) {
+    #session-list { width: 100%; height: 140px; border-right: none; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; display: flex; flex-direction: row; padding: 8px; gap: 0; }
+    .list-heading { display: none; }
+    .session-item { border-left: none; border-bottom: 2px solid transparent; min-width: 120px; white-space: nowrap; }
+    .session-item.active { border-bottom-color: var(--accent); border-left: none; }
+    .layout { flex-direction: column; height: auto; min-height: calc(100vh - 49px); }
+    #viewer { overflow-y: visible; }
+  }
+</style>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+<header>
+  <h1><span class="bars">|||</span> BARCODE <span class="dim">//</span> ARCHIVE</h1>
+  <div id="ws-status">offline</div>
+</header>
+
+<nav class="page-nav" style="display:flex">
+  <a href="index.html">← AUDIENCE</a>
+  <span class="current">ARCHIVE</span>
+  <a href="#" onclick="openUploadModal();return false;">UPLOAD MEDIA</a>
+  <a href="#" onclick="qrShareOpen();return false;">QR</a>
+  <a href="https://hetti.be/dspm" target="_blank" rel="noopener">ABOUT ↗</a>
+</nav>
+
+<div class="layout">
+  <div id="session-list">
+    <div class="list-heading">Sessions</div>
+    <div id="session-items"></div>
+  </div>
+
+  <div id="viewer">
+    <div id="empty-state">
+      <div class="big">◈</div>
+      <div>select a session</div>
+    </div>
+
+    <div id="video-wrap">
+      <video id="main-video" preload="metadata"></video>
+      <div class="video-offset-row">
+        VIDEO OFFSET (s)
+        <input type="number" id="video-offset" value="0" step="0.1">
+        <span id="offset-hint" style="opacity:0.5">adjust if video/params are out of sync</span>
+      </div>
+    </div>
+
+    <div id="timeline-wrap">
+      <div class="tl-header">
+        <span>PARAMETER TIMELINE</span>
+        <span id="tl-duration"></span>
+      </div>
+      <canvas id="timeline-canvas"></canvas>
+    </div>
+
+    <div id="controls">
+      <button class="ctrl-btn" id="play-btn">▶ PLAY</button>
+      <div id="time-display">0:00 / 0:00</div>
+      <div class="scrub-track" id="scrub-track">
+        <div class="scrub-fill" id="scrub-fill"></div>
+        <div class="scrub-thumb" id="scrub-thumb"></div>
+      </div>
+      <a class="remix-btn" id="remix-link" href="#" target="_blank">⊕ REMIX</a>
+    </div>
+
+    <div id="legend"></div>
+
+    <div id="editor">
+      <div class="ed-section">
+        <div class="ed-head">
+          <span>Media clips · sync</span>
+          <button class="ed-btn" id="ed-autosync">⟳ Auto-sync</button>
+        </div>
+        <div id="ed-tracks"></div>
+        <div class="ed-note" id="ed-tracks-note"></div>
+      </div>
+
+      <div class="ed-section">
+        <div class="ed-head"><span>Social cut (9:16 viz)</span></div>
+        <div class="ed-row">
+          in <input type="number" id="ed-social-in" step="0.1" placeholder="start s">
+          <button class="ed-btn" id="ed-social-in-here">⟱ playhead</button>
+          out <input type="number" id="ed-social-out" step="0.1" placeholder="end s">
+          <button class="ed-btn" id="ed-social-out-here">⟱ playhead</button>
+        </div>
+      </div>
+
+      <div class="ed-section">
+        <div class="ed-head">
+          <span>Chapters (DVD)</span>
+          <button class="ed-btn" id="ed-chapter-add">+ at playhead</button>
+        </div>
+        <div class="ed-row" id="ed-chapters"></div>
+      </div>
+
+      <div class="ed-section">
+        <div class="ed-head"><span>Export</span></div>
+        <div class="ed-row">
+          <button class="ed-btn go" id="ed-render-social">▶ Render social</button>
+          <button class="ed-btn go" id="ed-render-master">▶ Render master (1080p)</button>
+          <button class="ed-btn go" id="ed-render-dvd">▶ Author DVD</button>
+        </div>
+        <div class="ed-jobs" id="ed-jobs"></div>
+        <div class="ed-head" style="margin-top:14px"><span>Renders</span></div>
+        <div class="ed-jobs" id="ed-renders"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script src="config.js"></script>
+<script src="archive.js"></script>
+<script src="editor.js"></script>
+<script src="upload.js"></script>
+<script src="qrcode.min.js"></script>
+<script src="qr-share.js"></script>
+</body>
+</html>

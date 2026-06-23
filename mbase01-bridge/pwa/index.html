@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#08080e" />
+<title>MBase 01</title>
+<style>
+:root {
+  --bg:     #08080e;
+  --panel:  #101018;
+  --line:   #1c1c2c;
+  --accent: #e0380a;
+  --glow:   #ff5522;
+  --txt:    #d8d8e8;
+  --dim:    #505068;
+  --track:  #1e1e30;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--txt);
+             font: 13px/1 -apple-system, system-ui, 'Segoe UI', sans-serif; }
+
+header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+header h1 { font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--txt); }
+#midi-ch { font-size: 10px; color: var(--dim); margin-left: 4px; }
+#status  { margin-left: auto; font-size: 10px; color: var(--dim); }
+#status.ok  { color: #4ade80; }
+#status.err { color: #f87171; }
+#status.dry { color: #fb923c; }
+
+main {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+@media (max-width: 420px) {
+  main { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px; }
+}
+@media (min-width: 780px) {
+  main { grid-template-columns: repeat(4, 1fr); max-width: 720px; margin: 0 auto; }
+}
+@media (min-width: 1080px) {
+  main { grid-template-columns: repeat(6, 1fr); max-width: 1000px; }
+}
+
+.knob-cell {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: ns-resize;
+  user-select: none;
+  touch-action: none;
+  transition: border-color .1s;
+}
+.knob-cell:active,
+.knob-cell.active { border-color: var(--glow); }
+
+.knob-svg { width: 72px; height: 72px; overflow: visible; }
+
+.k-track { fill: none; stroke: var(--track);  stroke-width: 5; stroke-linecap: round; }
+.k-fill  { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; }
+.k-ind   { fill: var(--glow); }
+.k-center { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; }
+
+.knob-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--dim); text-align: center;
+}
+.knob-value {
+  font-size: 13px; font-variant-numeric: tabular-nums;
+  font-weight: 600; color: var(--accent); min-width: 32px; text-align: center;
+}
+.knob-group {
+  font-size: 8px; color: #303048; text-transform: uppercase; letter-spacing: 1px;
+}
+
+/* ── toolbar: ports + presets ─────────────────────────────────────────────── */
+.bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.bar .lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); }
+.bar select, .bar input, .bar button {
+  background: var(--bg); color: var(--txt); border: 1px solid var(--line);
+  border-radius: 7px; padding: 7px 9px; font: inherit; font-size: 12px;
+}
+.bar select { max-width: 42vw; }
+.bar input { width: 110px; }
+.bar button {
+  font-weight: 700; cursor: pointer; border-color: var(--accent); color: var(--accent); background: #000;
+}
+.bar button:active { background: var(--accent); color: #000; }
+.bar button.danger { border-color: #f87171; color: #f87171; }
+.bar .spacer { flex: 1 1 auto; }
+
+/* ── routing: channel triggers + CC remap ─────────────────────────────────── */
+.bar input.ch { width: 76px; }
+.bar label.chk { display: inline-flex; align-items: center; gap: 5px; color: var(--dim);
+                 font-size: 9px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+.bar label.chk input { width: auto; }
+.mon { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--dim);
+       padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px;
+       background: var(--bg); min-width: 150px; }
+.mon.hit { color: var(--glow); border-color: var(--accent); }
+
+#cc-routes { padding: 4px 12px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.route-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.route-row .lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); }
+.route-row input { width: 56px; background: var(--bg); color: var(--txt);
+                   border: 1px solid var(--line); border-radius: 7px; padding: 6px 7px; font: inherit; font-size: 12px; }
+.route-row select { background: var(--bg); color: var(--txt); border: 1px solid var(--line);
+                    border-radius: 7px; padding: 6px 7px; font: inherit; font-size: 12px; }
+.route-row .arrow { color: var(--dim); }
+.route-row button { background: #000; color: var(--accent); border: 1px solid var(--accent);
+                    border-radius: 7px; padding: 6px 9px; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.route-row button.learn.armed { background: var(--accent); color: #000; }
+.route-row button.del { border-color: #f87171; color: #f87171; }
+.route-row.learning input.cc { border-color: var(--accent); }
+#cc-routes .add { margin-top: 6px; background: #000; color: var(--txt); border: 1px dashed var(--line);
+                  border-radius: 7px; padding: 7px 10px; font: inherit; font-size: 11px; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MBase 01</h1>
+  <span id="midi-ch"></span>
+  <span id="status">connecting…</span>
+</header>
+<div class="bar" id="port-bar">
+  <span class="lbl">MIDI in</span>
+  <select id="sel-in"  title="MIDI input (from your sequencer)"></select>
+  <span class="lbl">out</span>
+  <select id="sel-out" title="MIDI output (to the MBase 01)"></select>
+  <button id="ports-refresh" title="Rescan ports">⟳</button>
+</div>
+<div class="bar" id="preset-bar">
+  <span class="lbl">Preset</span>
+  <select id="sel-preset"></select>
+  <button id="preset-load">Load</button>
+  <span class="spacer"></span>
+  <input id="preset-name" placeholder="name…" maxlength="48" />
+  <button id="preset-save">Save</button>
+  <button id="preset-del" class="danger">Del</button>
+</div>
+<div class="bar" id="route-bar">
+  <span class="lbl">Trigger ch</span>
+  <input id="trig-ch" class="ch" placeholder="e.g. 1,3" title="Source MIDI channels (1–16, comma-separated) whose notes fire the MBase" />
+  <label class="chk"><input type="checkbox" id="passthru" /> passthru</label>
+  <span class="spacer"></span>
+  <span class="lbl">MIDI in</span>
+  <span id="monitor" class="mon">— waiting —</span>
+  <button id="route-apply">Apply</button>
+</div>
+<div id="cc-routes"></div>
+<main id="grid"></main>
+
+<script>
+// ── Knob geometry ────────────────────────────────────────────────────────────
+// SVG viewBox 0 0 72 72, arc center (36,36), radius 27.
+// Arc sweeps 270° clockwise from 225° (7 o'clock) to 135° (5 o'clock).
+const R = 27, CX = 36, CY = 36;
+const START_DEG = 225;    // minimum position (fully CCW)
+const SWEEP_DEG = 270;    // total knob travel
+
+function toRad(d) { return d * Math.PI / 180; }
+function polarXY(deg, r) {
+  const a = toRad(deg);
+  return { x: CX + r * Math.cos(a), y: CY + r * Math.sin(a) };
+}
+function arcD(startDeg, sweepDeg, r) {
+  if (sweepDeg <= 0) return '';
+  const capped = Math.min(sweepDeg, SWEEP_DEG - 0.01);  // avoid degenerate full-circle
+  const s = polarXY(startDeg, r);
+  const e = polarXY(startDeg + capped, r);
+  const large = capped > 180 ? 1 : 0;
+  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs) {
+  const e = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  return e;
+}
+
+function makeKnobSVG() {
+  const svg  = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 72 72');
+  svg.setAttribute('class', 'knob-svg');
+
+  const track = el('path', { class: 'k-track', d: arcD(START_DEG, SWEEP_DEG, R) });
+  const fill  = el('path', { class: 'k-fill', d: '' });
+  const ctr   = el('circle', { class: 'k-center', cx: CX, cy: CY, r: 5 });
+  const ind   = el('circle', { class: 'k-ind', r: 4 });
+
+  svg.append(track, fill, ctr, ind);
+  return { svg, fill, ind };
+}
+
+function updateKnobDisplay({ fill, ind }, norm) {
+  const sweep = norm * SWEEP_DEG;
+  fill.setAttribute('d', sweep > 1 ? arcD(START_DEG, sweep, R) : '');
+  const pt = polarXY(START_DEG + sweep, R);
+  ind.setAttribute('cx', pt.x.toFixed(2));
+  ind.setAttribute('cy', pt.y.toFixed(2));
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+const state  = {};   // param id -> normalised 0..1
+const knobs  = {};   // param id -> { svg, fill, ind, valEl, param }
+let   PARAMS = [];
+
+function buildGrid(params) {
+  PARAMS = params;
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  for (const p of params) {
+    const norm = state[p.id] ?? 0.5;
+
+    const cell   = document.createElement('div');
+    cell.className = 'knob-cell';
+    cell.dataset.id = p.id;
+
+    const { svg, fill, ind } = makeKnobSVG();
+    updateKnobDisplay({ fill, ind }, norm);
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'knob-label';
+    labelEl.textContent = p.label;
+
+    const valEl = document.createElement('div');
+    valEl.className = 'knob-value';
+    valEl.textContent = displayValue(norm, p);
+
+    cell.append(svg, labelEl, valEl);
+    grid.appendChild(cell);
+    knobs[p.id] = { svg, fill, ind, valEl, param: p };
+
+    attachDrag(cell, p);
+  }
+}
+
+function displayValue(norm, p) {
+  const raw = Math.round(norm * 127);
+  return p.bipolar ? String(raw - 64) : String(raw);
+}
+
+function setValue(id, norm, fromServer) {
+  const n = Math.max(0, Math.min(1, norm));
+  state[id] = n;
+  const k = knobs[id];
+  if (!k) return;
+  updateKnobDisplay(k, n);
+  k.valEl.textContent = displayValue(n, k.param);
+  if (!fromServer) wsSend({ type: 'set', id, value: n });
+}
+
+// ── Drag interaction ─────────────────────────────────────────────────────────
+function attachDrag(cell, p) {
+  let startY = null, startVal = null;
+
+  cell.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    startY   = e.clientY;
+    startVal = state[p.id] ?? 0.5;
+    cell.setPointerCapture(e.pointerId);
+    cell.classList.add('active');
+  });
+
+  cell.addEventListener('pointermove', e => {
+    if (startY === null) return;
+    e.preventDefault();
+    const delta = (startY - e.clientY) / 180;   // 180 px = full range
+    setValue(p.id, startVal + delta);
+  });
+
+  const endDrag = () => { startY = null; cell.classList.remove('active'); };
+  cell.addEventListener('pointerup',     endDrag);
+  cell.addEventListener('pointercancel', endDrag);
+
+  // double-tap/click resets to center
+  cell.addEventListener('dblclick', () => setValue(p.id, 0.5));
+}
+
+// ── WebSocket ────────────────────────────────────────────────────────────────
+const statusEl = document.getElementById('status');
+const chEl     = document.getElementById('midi-ch');
+let ws = null;
+
+function wsSend(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+// Fallback CC map baked in so the page renders even if the bridge is down
+const FALLBACK_PARAMS = [
+  { id:'tune',        cc:14, label:'Tune',      group:'Osc',    bipolar:true  },
+  { id:'decay',       cc:15, label:'Decay',      group:'Osc'                  },
+  { id:'accent',      cc:16, label:'Accent',     group:'Osc'                  },
+  { id:'pitchEnv',    cc:17, label:'Pitch Env',  group:'P.Env'                },
+  { id:'pitchEnvDec', cc:18, label:'P.Env Dec',  group:'P.Env'                },
+  { id:'punch',       cc:19, label:'Punch',       group:'P.Env'                },
+  { id:'noise',       cc:20, label:'Noise',       group:'Noise'                },
+  { id:'noiseFilter', cc:21, label:'N.Filter',   group:'Noise'                },
+  { id:'distortion',  cc:22, label:'Distort',    group:'Noise'                },
+  { id:'eqBass',      cc:23, label:'EQ Bass',    group:'Output', bipolar:true },
+  { id:'eqTreble',    cc:24, label:'EQ Treble',  group:'Output', bipolar:true },
+  { id:'compressor',  cc:25, label:'Comp',        group:'Output'               },
+];
+
+buildGrid(FALLBACK_PARAMS);
+
+function connect() {
+  ws = new WebSocket(`ws://${location.host}`);
+
+  ws.onopen  = () => { statusEl.className = 'ok'; statusEl.textContent = 'connected'; };
+  ws.onclose = () => {
+    statusEl.className = 'err'; statusEl.textContent = 'disconnected — retrying…';
+    setTimeout(connect, 2000);
+  };
+  ws.onerror = () => { statusEl.className = 'err'; statusEl.textContent = 'error'; };
+
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === 'hello') {
+      if (msg.params?.length) buildGrid(msg.params);
+      showBackend(msg.midiBackend);
+      chEl.textContent = `ch ${msg.mbase01Channel}`;
+
+      // initialise knobs from bridge state (last-known CC values)
+      if (msg.state) {
+        for (const [ccStr, rawVal] of Object.entries(msg.state)) {
+          const cc = parseInt(ccStr);
+          const p  = (msg.params || FALLBACK_PARAMS).find(x => x.cc === cc);
+          if (p) setValue(p.id, rawVal / 127, true);
+        }
+      }
+      if (msg.ports)   renderPorts(msg.ports);
+      if (msg.presets) renderPresets(msg.presets);
+      if (msg.routing) renderRouting(msg.routing);
+    }
+
+    // CC echo from a routed/passthrough MIDI in (the bridge already remapped it)
+    if (msg.type === 'cc') {
+      const p = PARAMS.find(x => x.cc === msg.cc);
+      if (p) setValue(p.id, msg.value / 127, true);
+    }
+
+    // live MIDI monitor — show incoming traffic + feed CC "Learn"
+    if (msg.type === 'midi') onMidiMonitor(msg);
+
+    // live updates pushed by the bridge
+    if (msg.type === 'ports')   { renderPorts(msg); showBackend(msg.backend); }
+    if (msg.type === 'presets') renderPresets(msg.presets);
+    if (msg.type === 'routing') renderRouting(msg.routing);
+  };
+}
+
+function showBackend(backend) {
+  const dry = !backend || backend === 'dry-run';
+  statusEl.className = dry ? 'dry' : 'ok';
+  statusEl.textContent = dry ? 'dry-run (no MIDI hw)'
+    : backend.replace(/^easymidi\(/, '').replace(/\)$/, '');
+}
+
+// ── MIDI port picker ──────────────────────────────────────────────────────────
+const selIn  = document.getElementById('sel-in');
+const selOut = document.getElementById('sel-out');
+
+function fillSelect(sel, names, current) {
+  sel.innerHTML = '';
+  const none = document.createElement('option');
+  none.value = '__none__'; none.textContent = '— none —';
+  sel.appendChild(none);
+  for (const n of names) {
+    const o = document.createElement('option');
+    o.value = n; o.textContent = n;
+    if (n === current) o.selected = true;
+    sel.appendChild(o);
+  }
+  if (!current) none.selected = true;
+}
+
+function renderPorts(p) {
+  fillSelect(selIn,  p.inputs  || [], p.inName);
+  fillSelect(selOut, p.outputs || [], p.outName);
+}
+
+async function selectPorts() {
+  const body = { in: selIn.value, out: selOut.value };
+  const r = await fetch('/ports', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const st = await r.json();
+  renderPorts(st); showBackend(st.backend);
+}
+selIn.addEventListener('change', selectPorts);
+selOut.addEventListener('change', selectPorts);
+document.getElementById('ports-refresh').addEventListener('click', async () => {
+  const st = await (await fetch('/ports')).json();
+  renderPorts(st);
+});
+
+// ── presets ───────────────────────────────────────────────────────────────────
+const selPreset  = document.getElementById('sel-preset');
+const presetName = document.getElementById('preset-name');
+
+function renderPresets(names) {
+  const prev = selPreset.value;
+  selPreset.innerHTML = '';
+  if (!names.length) {
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = '— no presets —'; o.disabled = true;
+    selPreset.appendChild(o);
+  }
+  for (const n of names) {
+    const o = document.createElement('option');
+    o.value = n; o.textContent = n;
+    selPreset.appendChild(o);
+  }
+  if (names.includes(prev)) selPreset.value = prev;
+}
+
+document.getElementById('preset-save').addEventListener('click', async () => {
+  const name = (presetName.value || selPreset.value || '').trim();
+  if (!name) { presetName.focus(); return; }
+  await fetch('/presets/' + encodeURIComponent(name), {
+    method: 'PUT', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ values: { ...state } }),
+  });
+  presetName.value = '';
+  // bridge broadcasts the updated list; also select what we just saved
+  const list = await (await fetch('/presets')).json();
+  renderPresets(list.presets); selPreset.value = name;
+});
+
+document.getElementById('preset-load').addEventListener('click', async () => {
+  const name = selPreset.value;
+  if (!name) return;
+  const r = await fetch('/presets/' + encodeURIComponent(name));
+  if (!r.ok) return;
+  const rec = await r.json();
+  for (const [id, norm] of Object.entries(rec.values || {})) {
+    if (knobs[id]) setValue(id, norm);   // setValue sends the CC over WS
+  }
+});
+
+document.getElementById('preset-del').addEventListener('click', async () => {
+  const name = selPreset.value;
+  if (!name) return;
+  await fetch('/presets/' + encodeURIComponent(name), { method: 'DELETE' });
+  const list = await (await fetch('/presets')).json();
+  renderPresets(list.presets);
+});
+
+// ── Routing: channel triggers + CC remap ──────────────────────────────────────
+const trigChEl  = document.getElementById('trig-ch');
+const passthruEl = document.getElementById('passthru');
+const routesEl  = document.getElementById('cc-routes');
+const monitorEl = document.getElementById('monitor');
+
+let routeRows = [];          // [{ ch, cc, param }] working copy of UI rows
+let learnRow  = null;        // index of the row armed for MIDI-learn, or null
+
+function renderRouting(routing) {
+  if (!routing) return;
+  trigChEl.value  = (routing.triggerChannels || []).join(', ');
+  passthruEl.checked = !!routing.passthrough;
+  routeRows = (routing.ccRoutes || []).map(r => ({ ch: r.ch, cc: r.cc, param: r.param }));
+  drawRoutes();
+}
+
+function paramOptions(selected) {
+  return ['<option value="">— param —</option>'].concat(
+    PARAMS.map(p => `<option value="${p.id}"${p.id === selected ? ' selected' : ''}>${p.label}</option>`)
+  ).join('');
+}
+
+function drawRoutes() {
+  routesEl.innerHTML = '';
+  routeRows.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'route-row';
+    row.innerHTML =
+      `<span class="lbl">ch</span>` +
+      `<input class="rch" type="number" min="1" max="16" placeholder="any" value="${r.ch ?? ''}" />` +
+      `<span class="lbl">cc</span>` +
+      `<input class="cc" type="number" min="0" max="127" value="${r.cc ?? ''}" />` +
+      `<button class="learn">Learn</button>` +
+      `<span class="arrow">→</span>` +
+      `<select class="param">${paramOptions(r.param)}</select>` +
+      `<button class="del">✕</button>`;
+
+    const chIn = row.querySelector('.rch');
+    const ccIn = row.querySelector('.cc');
+    const pSel = row.querySelector('.param');
+    chIn.addEventListener('change', () => { routeRows[i].ch = chIn.value === '' ? null : +chIn.value; });
+    ccIn.addEventListener('change', () => { routeRows[i].cc = ccIn.value === '' ? null : +ccIn.value; });
+    pSel.addEventListener('change', () => { routeRows[i].param = pSel.value; });
+
+    row.querySelector('.del').addEventListener('click', () => { routeRows.splice(i, 1); drawRoutes(); });
+    row.querySelector('.learn').addEventListener('click', e => {
+      const armed = learnRow === i;
+      learnRow = armed ? null : i;
+      drawRoutes();   // re-render to clear other armed buttons
+    });
+    if (learnRow === i) {
+      row.classList.add('learning');
+      row.querySelector('.learn').classList.add('armed');
+    }
+    routesEl.appendChild(row);
+  });
+
+  const add = document.createElement('button');
+  add.className = 'add';
+  add.textContent = '+ add CC route';
+  add.addEventListener('click', () => { routeRows.push({ ch: null, cc: null, param: '' }); drawRoutes(); });
+  routesEl.appendChild(add);
+}
+
+// Incoming MIDI from the bridge: update the monitor line, and if a row is armed
+// for Learn, capture the source channel + CC into it.
+let monTimer = null;
+function onMidiMonitor(m) {
+  const label = m.mtype === 'cc'
+    ? `ch ${m.channel}  CC ${m.controller} = ${m.value}`
+    : `ch ${m.channel}  ${m.mtype === 'noteon' ? 'NOTE' : 'note↑'} ${m.note} v${m.velocity ?? 0}`;
+  monitorEl.textContent = label;
+  monitorEl.classList.add('hit');
+  clearTimeout(monTimer);
+  monTimer = setTimeout(() => monitorEl.classList.remove('hit'), 150);
+
+  if (learnRow != null && m.mtype === 'cc' && routeRows[learnRow]) {
+    routeRows[learnRow].ch = m.channel;
+    routeRows[learnRow].cc = m.controller;
+    learnRow = null;
+    drawRoutes();
+  }
+}
+
+async function applyRouting() {
+  const triggerChannels = trigChEl.value.split(',')
+    .map(s => parseInt(s.trim(), 10)).filter(n => n >= 1 && n <= 16);
+  const ccRoutes = routeRows
+    .filter(r => r.cc != null && r.param)
+    .map(r => ({ ch: r.ch ?? null, cc: r.cc, param: r.param }));
+  const body = { triggerChannels, ccRoutes, passthrough: passthruEl.checked };
+  const r = await fetch('/routing', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (r.ok) renderRouting(await r.json());
+}
+document.getElementById('route-apply').addEventListener('click', applyRouting);
+
+connect();
+</script>
+</body>
+</html>

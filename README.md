@@ -7,7 +7,7 @@ The crowd can be **in the room** over local WiFi, or **anyone online anywhere** 
 ## Layout
 
 ```
-norns/dspm_archive/      -- patched barcode (dspm_archive.lua) + lib/ (json, perf_logger)
+norns/dspm_archive/      -- patched barcode (dspm_archive.lua) + lib/ (json, perf_logger, feedback)
 bridge/                  -- many-phones→norns aggregation bridge + session logging (Node)
 backend/                 -- performer session-labeling tool (Express + ajv), form UI
 pwa/                     -- audience phone controller (installable PWA)
@@ -37,6 +37,7 @@ Transfer the folder via FileZilla SFTP (the only reliable method — SMB silentl
 /home/we/dust/code/dspm_archive/dspm_archive.lua
 /home/we/dust/code/dspm_archive/lib/json.lua
 /home/we/dust/code/dspm_archive/lib/perf_logger.lua
+/home/we/dust/code/dspm_archive/lib/feedback.lua
 ```
 
 Then verify the transfer landed (don't trust timestamps):
@@ -44,6 +45,7 @@ Then verify the transfer landed (don't trust timestamps):
 ```sh
 wc -c ~/dust/code/dspm_archive/dspm_archive.lua    # expect ~29000+ bytes
 grep -c "osc.event = function" ~/dust/code/dspm_archive/dspm_archive.lua   # expect 1
+wc -c ~/dust/code/dspm_archive/lib/feedback.lua    # expect 1000+ bytes
 ```
 
 On norns: SELECT → **dspm_archive**. Your old `barcode` entry is untouched. Logs land in `~/dust/data/dspm_archive/logs/`.
