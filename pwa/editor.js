@@ -143,7 +143,7 @@ function saveEdit() {
   saveTimer = setTimeout(() => {
     fetch(api(edId, '/edit'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ edit: edManifest.edit, media: edManifest.media }),
     }).catch(() => {})
   }, 300)
@@ -216,7 +216,7 @@ async function startRender(kind, opts) {
   try {
     const r = await fetch(api(edId, '/render/' + kind), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(opts || {}),
     })
     const job = await r.json()
@@ -234,7 +234,7 @@ async function startRender(kind, opts) {
 // ---- wire buttons ----------------------------------------------------------
 document.getElementById('ed-autosync').addEventListener('click', async () => {
   try {
-    const r = await fetch(api(edId, '/sync'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+    const r = await fetch(api(edId, '/sync'), { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: '{}' })
     const job = await r.json()
     if (job && job.id) {
       edJobs[job.id] = job

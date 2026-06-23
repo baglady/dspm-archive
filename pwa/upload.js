@@ -23,6 +23,10 @@
 
   const API = resolveApiBase()
 
+  // Upload is a mutating /api call -> carries the bridge admin token when the
+  // page was opened with ?token=<BRIDGE_ADMIN_TOKEN> (loopback needs none).
+  const ADMIN_TOKEN = _p.get('token') || _p.get('admin') || ''
+
   // ---- inject styles -------------------------------------------------------
   const style = document.createElement('style')
   style.textContent = `
@@ -337,6 +341,7 @@
       const xhr = new XMLHttpRequest()
       xhr.open('POST', API + '/api/sessions/' + encodeURIComponent(sessionId) +
         '/upload/' + encodeURIComponent(file.name))
+      if (ADMIN_TOKEN) xhr.setRequestHeader('x-admin-token', ADMIN_TOKEN)
       xhr.upload.addEventListener('progress', e => {
         if (e.lengthComputable) onProgress((e.loaded / e.total) * 100)
       })

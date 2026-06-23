@@ -22,6 +22,17 @@ const BRIDGE_URL = resolveBridgeUrl()
 const API_BASE = BRIDGE_URL.replace(/^wss?:\/\//, 'http' + (BRIDGE_URL.startsWith('wss') ? 's' : '') + '://')
   .replace(/\/$/, '')
 
+// Mutating /api calls (edit/render/sync/upload) require the bridge admin token
+// when one is configured. Reads are open. The performer opens the editor with
+// ?token=<BRIDGE_ADMIN_TOKEN> (or ?admin=); on the bridge machine itself it's
+// loopback so no token is needed. authHeaders() folds it onto fetch headers.
+const ADMIN_TOKEN = _params.get('token') || _params.get('admin') || ''
+function authHeaders(extra) {
+  const h = Object.assign({}, extra || {})
+  if (ADMIN_TOKEN) h['x-admin-token'] = ADMIN_TOKEN
+  return h
+}
+
 // ---- channel color palette -------------------------------------------------
 const VOICE_COLORS = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db']
 const GLOBAL_COLOR = '#c8c8d0'

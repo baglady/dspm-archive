@@ -55,6 +55,9 @@ const PWA_DIR = process.env.PWA_DIR === undefined
 const ADMIN_TOKEN = process.env.BRIDGE_ADMIN_TOKEN || '' // unset -> /admin is loopback-only
 const MAX_MSGS_PER_SEC = parseInt(process.env.BRIDGE_MAX_MSGS_PER_SEC || '300', 10) // per WS client (XY pad = 2 msgs/move; 120Hz drag ~240/s, so headroom above legit use)
 const HOOK_MAX_PER_SEC = parseInt(process.env.BRIDGE_HOOK_MAX_PER_SEC || '20', 10) // per webhook IP
+// Cap media upload size so an authed-but-buggy (or token-leaked) POST can't fill
+// the disk. Generous default for real video clips; tune via env.
+const UPLOAD_MAX_BYTES = parseInt(process.env.BRIDGE_UPLOAD_MAX_BYTES || String(1024 * 1024 * 1024), 10) // 1 GiB
 const HOOK_HOLD_MS = parseInt(process.env.BRIDGE_HOOK_HOLD_MS || '1000', 10) // continuous-hook hold
 
 // Optional: mirror every OSC message to a TouchDesigner visual engine (see
@@ -361,6 +364,17 @@ function isLoopback(req) {
   return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1'
 }
 
+// Auth for privileged routes (/admin and the mutating /api endpoints). If a
+// BRIDGE_ADMIN_TOKEN is set it must match (?token= or x-admin-token header), and
+// the route works from anywhere; if it's unset, the route is loopback-only (the
+// bridge machine itself). Behind the tunnel every request carries a forwarding
+// header, so loopback can never be spoofed from the public side.
+function isAuthed(req, urlObj) {
+  return ADMIN_TOKEN
+    ? (urlObj.searchParams.get('token') || req.headers['x-admin-token']) === ADMIN_TOKEN
+    : isLoopback(req)
+}
+
 function readBody(req, cb) {
   let data = ''
   let aborted = false
@@ -378,10 +392,7 @@ function readBody(req, cb) {
 // verb (so a plain browser/curl GET works). Auth: token if BRIDGE_ADMIN_TOKEN is
 // set (works from anywhere), else loopback-only (the bridge machine itself).
 function handleAdmin(req, res, urlObj) {
-  const ok = ADMIN_TOKEN
-    ? (urlObj.searchParams.get('token') || req.headers['x-admin-token']) === ADMIN_TOKEN
-    : isLoopback(req)
-  if (!ok) return sendJson(res, 403, { error: 'forbidden' })
+  if (!isAuthed(req, urlObj)) return sendJson(res, 403, { error: 'forbidden' })
 
   const q = urlObj.searchParams
   if (q.has('enabled')) crowd.enabled = !['0', 'false', 'off', 'no'].includes(q.get('enabled').toLowerCase())
@@ -496,6 +507,15 @@ function serveMedia(req, res, fp) {
 }
 
 function handleApi(req, res, urlObj) {
+  // Every mutating /api endpoint (recording start/stop, upload, edit, sync,
+  // render) can drive norns, write to disk, or spawn renderers -- gate them like
+  // /admin. Reads (GET: session list/manifest/ticks/media, job + recording
+  // state) stay open; restrict those further at the edge with Cloudflare Access
+  // if the archive shouldn't be public on this hostname.
+  if (req.method !== 'GET' && !isAuthed(req, urlObj)) {
+    return sendJson(res, 403, { error: 'forbidden' })
+  }
+
   const parts = urlObj.pathname.replace(/^\/api/, '').split('/').filter(Boolean)
   const SESSIONS_ROOT = path.resolve(SESSIONS_DIR)
 
@@ -597,9 +617,22 @@ function handleApi(req, res, urlObj) {
       if (!file || /[/\\]/.test(file)) return sendJson(res, 400, { error: 'bad filename' })
       const fp = path.join(sDir, file)
       const out = fs.createWriteStream(fp)
+      let written = 0
+      let tooBig = false
+      req.on('data', (chunk) => {
+        if (tooBig) return
+        written += chunk.length
+        if (written > UPLOAD_MAX_BYTES) {
+          tooBig = true
+          req.destroy()
+          out.destroy()
+          fs.unlink(fp, () => {}) // don't leave a truncated partial on disk
+          return sendJson(res, 413, { error: 'file too large', max_bytes: UPLOAD_MAX_BYTES })
+        }
+      })
       req.pipe(out)
-      out.on('finish', () => sendJson(res, 200, { ok: true, file }))
-      out.on('error', () => sendJson(res, 500, { error: 'write failed' }))
+      out.on('finish', () => { if (!tooBig) sendJson(res, 200, { ok: true, file }) })
+      out.on('error', () => { if (!tooBig) sendJson(res, 500, { error: 'write failed' }) })
       return
     }
 
@@ -670,7 +703,7 @@ function handleApi(req, res, urlObj) {
 function handleRequest(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token')
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
   const urlObj = new URL(req.url, 'http://localhost')
   if (urlObj.pathname === '/admin/crowd') return handleAdmin(req, res, urlObj)

@@ -450,6 +450,17 @@ const qp    = new URLSearchParams(location.search);
 const proto = location.protocol === "https:" ? "wss://" : "ws://";
 const BRIDGE_PORT = "8081";
 
+// Mutating /api calls (recording start/stop, media upload) require the bridge
+// admin token when one is set. The performer opens this page with
+// ?token=<BRIDGE_ADMIN_TOKEN>; on the bridge machine itself it's loopback so no
+// token is needed. perfAuthHeaders() folds it onto fetch headers.
+const PERF_TOKEN = qp.get("token") || qp.get("admin") || "";
+function perfAuthHeaders(extra) {
+  const h = Object.assign({}, extra || {});
+  if (PERF_TOKEN) h["x-admin-token"] = PERF_TOKEN;
+  return h;
+}
+
 function resolveBridgeUrl() {
   const ov = qp.get("bridge");
   if (ov) return /^wss?:\/\//.test(ov) ? ov : proto + ov;
@@ -855,7 +866,7 @@ app.appendChild(buildVoices());
     try {
       const r = await fetch(API + '/api/recording/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: perfAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ name }),
       })
       const json = await r.json()
@@ -879,7 +890,7 @@ app.appendChild(buildVoices());
   recStopBtn.addEventListener('click', async () => {
     recStopBtn.disabled = true
     try {
-      const r = await fetch(API + '/api/recording/stop', { method: 'POST' })
+      const r = await fetch(API + '/api/recording/stop', { method: 'POST', headers: perfAuthHeaders() })
       lastStopResult = await r.json()
     } catch (e) { lastStopResult = null }
 

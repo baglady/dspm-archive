@@ -16,6 +16,12 @@ const jobs = new Map() // jobId -> job
 let _broadcast = () => {}
 let _seq = 0
 
+// Render/sync are heavy (ffmpeg). Cap how many run at once so a burst of
+// requests queues instead of thrashing the box; the rest start as slots free.
+const MAX_CONCURRENT = parseInt(process.env.BRIDGE_MAX_RENDER_JOBS || '2', 10)
+let _running = 0
+const _queue = [] // jobs waiting for a slot (status 'queued')
+
 function init(broadcast) {
   if (typeof broadcast === 'function') _broadcast = broadcast
 }
@@ -51,8 +57,29 @@ function get(id) {
 // filename from the combined output on success.
 function spawnJob({ sessionId, kind, script, args, progressOf, fileOf }) {
   const id = newId()
-  const job = { id, sessionId, kind, status: 'running', progress: 0, startedAt: Date.now(), out: '' }
+  const job = {
+    id, sessionId, kind, status: 'queued', progress: 0, startedAt: Date.now(), out: '',
+    _spec: { script, args, progressOf, fileOf },
+  }
   jobs.set(id, job)
+  _broadcast({ type: 'render_job', job: publicJob(job) })
+  _queue.push(job)
+  pump()
+  return publicJob(job)
+}
+
+// Start queued jobs while a slot is free.
+function pump() {
+  while (_running < MAX_CONCURRENT && _queue.length) {
+    runJob(_queue.shift())
+  }
+}
+
+function runJob(job) {
+  const { script, args, progressOf, fileOf } = job._spec
+  _running++
+  job.status = 'running'
+  job.startedAt = Date.now()
   _broadcast({ type: 'render_job', job: publicJob(job) })
 
   const child = spawn(process.execPath, [path.join(__dirname, script), ...args], {
@@ -75,6 +102,11 @@ function spawnJob({ sessionId, kind, script, args, progressOf, fileOf }) {
   child.stdout.on('data', onChunk)
   child.stderr.on('data', onChunk)
 
+  function finish() {
+    _running = Math.max(0, _running - 1)
+    pump() // a slot freed up -> start the next queued job
+  }
+
   child.on('close', (code) => {
     if (code === 0) {
       job.status = 'done'
@@ -85,14 +117,14 @@ function spawnJob({ sessionId, kind, script, args, progressOf, fileOf }) {
       job.error = (job.out || '').slice(-600) || ('exit ' + code)
     }
     _broadcast({ type: 'render_job', job: publicJob(job) })
+    finish()
   })
   child.on('error', (err) => {
     job.status = 'error'
     job.error = err.message
     _broadcast({ type: 'render_job', job: publicJob(job) })
+    finish()
   })
-
-  return publicJob(job)
 }
 
 // --- specific job kinds -----------------------------------------------------
