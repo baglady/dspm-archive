@@ -328,7 +328,15 @@ function serveStatic(req, res) {
   if (!fp.startsWith(root)) { res.writeHead(403); return res.end('forbidden') }
   fs.readFile(fp, (err, data) => {
     if (err) { res.writeHead(404); return res.end('not found') }
-    res.writeHead(200, { 'Content-Type': STATIC_TYPES[path.extname(fp)] || 'application/octet-stream' })
+    const ext = path.extname(fp)
+    const headers = { 'Content-Type': STATIC_TYPES[ext] || 'application/octet-stream' }
+    // The app shell (HTML/JS/JSON) must always revalidate so a deploy takes effect
+    // immediately -- otherwise Cloudflare's edge keeps serving stale code (e.g. an
+    // old resolveBridgeUrl). Static assets (images/css) stay cacheable.
+    if (ext === '.html' || ext === '.js' || ext === '.json' || ext === '.webmanifest') {
+      headers['Cache-Control'] = 'no-cache'
+    }
+    res.writeHead(200, headers)
     res.end(data)
   })
 }
