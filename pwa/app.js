@@ -56,7 +56,10 @@ function resolveBridgeUrl() {
     return proto + location.host +
       location.pathname.replace(/\/proxy\/\d+\/.*/, "/proxy/" + BRIDGE_PORT + "/");
   }
-  return proto + location.hostname + ":" + BRIDGE_PORT;
+  // If the page is on a standard port (80/443) the bridge is at the same origin
+  // (tunnel / reverse-proxy). If on a non-standard port (LAN direct-connect), append it.
+  const onStandardPort = !location.port || location.port === "80" || location.port === "443";
+  return onStandardPort ? proto + location.host : proto + location.hostname + ":" + BRIDGE_PORT;
 }
 const bridgeUrl = resolveBridgeUrl();
 

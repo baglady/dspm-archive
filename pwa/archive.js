@@ -15,7 +15,8 @@ function resolveBridgeUrl() {
     return _proto + location.host +
       location.pathname.replace(/\/proxy\/\d+\/.*/, '/proxy/' + BRIDGE_PORT + '/')
   }
-  return _proto + location.hostname + ':' + BRIDGE_PORT
+  const onStandardPort = !location.port || location.port === '80' || location.port === '443'
+  return onStandardPort ? _proto + location.host : _proto + location.hostname + ':' + BRIDGE_PORT
 }
 
 const BRIDGE_URL = resolveBridgeUrl()
