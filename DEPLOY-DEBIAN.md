@@ -54,11 +54,22 @@ $EDITOR /opt/dspm-archive/deploy/dspm-bridge.env
 Set, at minimum:
 
 ```ini
-NORNS_HOST=192.168.1.50         # the norns' LAN IP (static DHCP lease recommended)
-BRIDGE_BIND=127.0.0.1           # loopback only — only cloudflared reaches it
-BRIDGE_ADMIN_TOKEN=<openssl rand -hex 24>   # gates the performer kill-switch publicly
+# norns' LAN IP (give it a static DHCP lease so this never moves)
+NORNS_HOST=192.168.1.50
+# loopback only -- only cloudflared reaches the bridge
+BRIDGE_BIND=127.0.0.1
+# gates the performer kill-switch + /api publicly; generate with: openssl rand -hex 24
+BRIDGE_ADMIN_TOKEN=paste-the-hex-string-here
 SESSIONS_DIR=/opt/dspm-archive/sessions
 ```
+
+> ⚠️ **No inline comments after a value.** systemd's `EnvironmentFile` does *not*
+> strip a trailing `# comment` — it keeps it as part of the value. So
+> `BRIDGE_BIND=127.0.0.1   # loopback` makes the bind host literally
+> `127.0.0.1   # loopback`, and the bridge crashes with
+> `getaddrinfo ENOTFOUND`. Put comments on their own `#` lines, as above. And
+> `BRIDGE_ADMIN_TOKEN=` takes the *output* of `openssl rand -hex 24`, not the
+> command itself.
 
 ### 3. Install the systemd service
 
