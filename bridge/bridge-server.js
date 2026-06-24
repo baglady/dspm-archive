@@ -708,6 +708,44 @@ function handleApi(req, res, urlObj) {
   sendJson(res, 404, { error: 'not found' })
 }
 
+const PERFORMER_LOGIN_HTML = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>performer · token required</title>
+<style>
+  body { margin: 0; background: #0a0a0c; color: #e8e8ec; font-family: 'Courier New', monospace;
+         display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  form { display: flex; flex-direction: column; gap: 12px; width: min(340px, 90vw); }
+  h1 { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #8a8a92; margin: 0 0 8px; }
+  input { background: #141418; border: 1px solid #2a2a30; border-radius: 5px; color: #e8e8ec;
+          font-family: inherit; font-size: 15px; padding: 12px 14px; outline: none; }
+  input:focus { border-color: #ff3b30; }
+  button { background: #ff3b30; border: none; border-radius: 6px; color: #fff;
+           font-family: inherit; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase;
+           padding: 13px; cursor: pointer; }
+  .err { color: #ff3b30; font-size: 11px; display: none; }
+</style></head><body>
+<form id="f">
+  <h1>||| barcode /// performer</h1>
+  <input type="password" id="t" placeholder="admin token" autocomplete="current-password">
+  <div class="err" id="e">wrong token</div>
+  <button type="submit">enter</button>
+</form>
+<script>
+  document.getElementById('f').addEventListener('submit', function(ev) {
+    ev.preventDefault();
+    const tok = document.getElementById('t').value.trim();
+    if (!tok) return;
+    fetch('/performer.html?token=' + encodeURIComponent(tok))
+      .then(function(r) {
+        if (r.ok) { location.href = '/performer.html?token=' + encodeURIComponent(tok); }
+        else { document.getElementById('e').style.display = 'block'; }
+      }).catch(function() { document.getElementById('e').style.display = 'block'; });
+  });
+</script>
+</body></html>`
+
 function handleRequest(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
@@ -717,6 +755,12 @@ function handleRequest(req, res) {
   if (urlObj.pathname === '/admin/crowd') return handleAdmin(req, res, urlObj)
   if (urlObj.pathname.startsWith('/hook/')) return handleHook(req, res, urlObj)
   if (urlObj.pathname.startsWith('/api/')) return handleApi(req, res, urlObj)
+  // Gate performer.html behind the admin token when one is configured.
+  // Without a valid token the bridge returns a password-entry page instead.
+  if (urlObj.pathname === '/performer.html' && ADMIN_TOKEN && !isAuthed(req, urlObj)) {
+    res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' })
+    return res.end(PERFORMER_LOGIN_HTML)
+  }
   return serveStatic(req, res)
 }
 
