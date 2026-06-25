@@ -1,0 +1,18 @@
+[Unit]
+Description=dspm dockerized norns (schollz/norns-desktop, headless OSC appliance)
+Documentation=https://github.com/baglady/dspm-archive
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/home/baglady/norns-desktop/run-dspm.sh
+ExecStop=/usr/bin/docker rm -f norns-docker
+TimeoutStartSec=300
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

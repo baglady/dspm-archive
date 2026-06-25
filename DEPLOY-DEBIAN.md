@@ -152,6 +152,21 @@ sudo systemctl restart dspm-bridge
 
 ---
 
+## Co-located norns in Docker (closes the UDP gap over loopback)
+
+You don't actually need a separate norns box at all: a full norns software stack
+runs **in Docker on this same machine** ([schollz/norns-desktop]), so the bridge
+drives it over **loopback** (`127.0.0.1:10111`) — the UDP leg never leaves the
+box, so the tunnel limitation below simply doesn't apply. Set
+`NORNS_HOST=127.0.0.1`. Headless/softcut-only (control, feedback, session
+logging, and an mp3 monitor stream all work; no live audio I/O by default). Full
+runbook + the systemd unit: [deploy/norns-docker/](deploy/norns-docker/).
+
+This is the simplest "permanent home" norns and is what runs on `babayaga` now.
+Phase 2 below is only for a norns that must live somewhere *else*.
+
+[schollz/norns-desktop]: https://github.com/schollz/norns-desktop
+
 ## Phase 2 — remote norns (later)
 
 When a norns will be somewhere this box can't reach over UDP (a venue, a friend's
