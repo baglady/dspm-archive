@@ -25,6 +25,6 @@ fi
 echo "== monitor stream (want: tens of thousands) =="
 echo "radio.mp3 bytes/3s: $(curl -s --max-time 3 http://127.0.0.1:8002/radio.mp3 2>/dev/null | wc -c)"
 echo
-echo "controller : https://dspm.hetti.be/    (LAN http://10.0.0.129:8081/)"
+echo "controller : https://dspm.hetti.be/             (LAN http://10.0.0.129:8081/)"
 echo "performer  : /performer.html?token=<BRIDGE_ADMIN_TOKEN>"
-echo "monitor    : http://10.0.0.129:8002/radio.mp3"
+echo "monitor    : https://dspm.hetti.be/radio.mp3    (LAN http://10.0.0.129:8002/radio.mp3)"

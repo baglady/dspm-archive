@@ -341,6 +341,29 @@ function serveStatic(req, res) {
   })
 }
 
+// Proxy the icecast monitor stream so it's reachable on the SAME origin as the
+// PWA -- i.e. through the Cloudflare tunnel (https://<host>/radio.mp3), not just
+// the LAN port :8002. Pure streaming pipe; no buffering. The dockerized norns'
+// softcut output is what's on the other end (see deploy/norns-docker).
+const RADIO_URL = process.env.RADIO_URL || 'http://127.0.0.1:8002/radio.mp3'
+function handleRadio(req, res) {
+  const u = new URL(RADIO_URL)
+  const upstream = http.request(
+    { host: u.hostname, port: u.port || 80, path: u.pathname, method: 'GET', headers: { 'User-Agent': 'dspm-bridge' } },
+    (up) => {
+      res.writeHead(up.statusCode || 502, {
+        'Content-Type': up.headers['content-type'] || 'audio/mpeg',
+        'Cache-Control': 'no-cache, no-store',
+        'Connection': 'close',
+      })
+      up.pipe(res)
+    }
+  )
+  upstream.on('error', () => { if (!res.headersSent) res.writeHead(502); res.end('radio unavailable') })
+  req.on('close', () => upstream.destroy())
+  upstream.end()
+}
+
 // ---- request helpers (admin + webhook routes) -----------------------------
 
 function sendJson(res, code, obj) {
@@ -755,6 +778,7 @@ function handleRequest(req, res) {
   if (urlObj.pathname === '/admin/crowd') return handleAdmin(req, res, urlObj)
   if (urlObj.pathname.startsWith('/hook/')) return handleHook(req, res, urlObj)
   if (urlObj.pathname.startsWith('/api/')) return handleApi(req, res, urlObj)
+  if (urlObj.pathname === '/radio.mp3') return handleRadio(req, res)
   // Gate performer.html behind the admin token when one is configured.
   // Without a valid token the bridge returns a password-entry page instead.
   if (urlObj.pathname === '/performer.html' && ADMIN_TOKEN && !isAuthed(req, urlObj)) {

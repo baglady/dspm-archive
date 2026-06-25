@@ -32,8 +32,10 @@ radio.mp3 bytes/3s: ~120000        (a number in the tens/hundreds of thousands)
 - **Phone (controller):** `https://dspm.hetti.be/` — the audience pads.
   LAN: `http://10.0.0.129:8081/` · tailnet: `http://100.103.9.125:8081/`
   Performer view (kill-switch/tape/admin): `/performer.html?token=<BRIDGE_ADMIN_TOKEN>`
-- **Hear it:** open `http://10.0.0.129:8002/radio.mp3` in any browser tab / media
-  player (VLC: *Open Network Stream*). This is the softcut output of the box.
+- **Hear it:** open `https://dspm.hetti.be/radio.mp3` in any browser tab / media
+  player (VLC: *Open Network Stream*) — works anywhere, same origin as the
+  controller (the bridge proxies it). LAN/tailnet direct: `http://10.0.0.129:8002/radio.mp3`.
+  This is the softcut output of the box.
 
 ## 3. Drive it & confirm
 

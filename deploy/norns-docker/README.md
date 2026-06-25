@@ -83,7 +83,10 @@ sudo docker logs -f norns-docker      # norns/matron/sclang/darkice log
 URLs (loopback; the bridge/tunnel is the only thing meant to be public):
 - screen  http://127.0.0.1:8889
 - maiden  http://127.0.0.1:5000
-- **radio  http://127.0.0.1:8002/radio.mp3**  (softcut output)
+- **radio  http://127.0.0.1:8002/radio.mp3**  (softcut output, LAN/tailnet)
+- **radio (public)  https://dspm.hetti.be/radio.mp3** — the bridge proxies :8002
+  on its own origin (`/radio.mp3` route in `bridge/bridge-server.js`), so the
+  monitor is reachable anywhere the controller is, through the tunnel.
 - OSC     udp/10111 (control), udp/10112 (feedback, on the bridge)
 
 ## Why it's built the way it is (the non-obvious bits)
