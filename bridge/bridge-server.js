@@ -341,11 +341,12 @@ function serveStatic(req, res) {
   })
 }
 
-// Proxy the icecast monitor stream so it's reachable on the SAME origin as the
-// PWA -- i.e. through the Cloudflare tunnel (https://<host>/radio.mp3), not just
-// the LAN port :8002. Pure streaming pipe; no buffering. The dockerized norns'
-// softcut output is what's on the other end (see deploy/norns-docker).
-const RADIO_URL = process.env.RADIO_URL || 'http://127.0.0.1:8002/radio.mp3'
+// Proxy the icecast monitor stream so it's also reachable on the SAME origin as
+// the PWA (https://<host>/radio.mp3). The norns' softcut output is published by
+// darkice to the host icecast mount /norns.mp3; the dedicated public URL is
+// https://radio.hetti.be/norns.mp3 -- this proxy is a same-origin convenience.
+// Pure streaming pipe; no buffering. See deploy/norns-docker.
+const RADIO_URL = process.env.RADIO_URL || 'http://127.0.0.1:8000/norns.mp3'
 function handleRadio(req, res) {
   const u = new URL(RADIO_URL)
   const upstream = http.request(

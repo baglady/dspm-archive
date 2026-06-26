@@ -50,13 +50,17 @@ sed -i 's|RUN npm install -g npm yarn|RUN npm install -g npm@10.9.2 yarn|' Docke
 #    baglady is not in the docker group, so use sudo.
 sudo docker build -t norns-docker .
 
-# 4. drop in the files from deploy/norns-docker/ (run-dspm.sh, start_norns.sh,
-#    jackdrc, matron-eval.js, osc-send.js) and the port-patched configs:
+# 4. drop in the files from deploy/norns-docker/ and point darkice at the box's
+#    existing YunoHost icecast (host :8000, served at radio.hetti.be). The mount
+#    becomes /norns.mp3; PW is that icecast's <source-password> from
+#    /etc/icecast2/icecast.xml (NOT committed).
 cp /opt/dspm-archive/deploy/norns-docker/{run-dspm.sh,start_norns.sh,jackdrc,matron-eval.js,osc-send.js} .
-cp icecast.xml icecast.xml.orig; cp darkice.cfg darkice.cfg.orig
-sed -i 's|<port>8000</port>|<port>8002</port>|' icecast.xml
-sed -i 's|port            = 8000|port            = 8002|' darkice.cfg
-chmod +x run-dspm.sh start_norns.sh
+cp darkice.cfg darkice.cfg.orig
+sed -i 's|^server          = .*|server          = 127.0.0.1|' darkice.cfg
+sed -i 's|^port            = .*|port            = 8000|'      darkice.cfg
+sed -i "s|^password        = .*|password        = <icecast source-password>|" darkice.cfg
+sed -i 's|^mountPoint      = .*|mountPoint      = norns.mp3|' darkice.cfg
+chmod +x run-dspm.sh start_norns.sh preflight.sh
 
 # 5. stage the script + data dirs
 mkdir -p dust/data dust/audio/tape dust/code
@@ -83,10 +87,12 @@ sudo docker logs -f norns-docker      # norns/matron/sclang/darkice log
 URLs (loopback; the bridge/tunnel is the only thing meant to be public):
 - screen  http://127.0.0.1:8889
 - maiden  http://127.0.0.1:5000
-- **radio  http://127.0.0.1:8002/radio.mp3**  (softcut output, LAN/tailnet)
-- **radio (public)  https://dspm.hetti.be/radio.mp3** — the bridge proxies :8002
-  on its own origin (`/radio.mp3` route in `bridge/bridge-server.js`), so the
-  monitor is reachable anywhere the controller is, through the tunnel.
+- **radio (public)  https://radio.hetti.be/norns.mp3** — darkice publishes the
+  softcut output to the box's existing YunoHost icecast (host `:8000`, mount
+  `/norns.mp3`); that host is already public at `radio.hetti.be`.
+- radio (same-origin alias)  https://dspm.hetti.be/radio.mp3 — the bridge
+  proxies the icecast mount (`/radio.mp3` route in `bridge/bridge-server.js`,
+  `RADIO_URL` overridable), handy for embedding alongside the PWA.
 - OSC     udp/10111 (control), udp/10112 (feedback, on the bridge)
 
 ## Why it's built the way it is (the non-obvious bits)

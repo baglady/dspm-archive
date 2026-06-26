@@ -4,8 +4,9 @@
 # a real LAN norns. SuperCollider engine never boots here (sclang does not
 # auto-boot scsynth in this image) -> startup reports SUPERCOLLIDER FAIL, which
 # is harmless: dspm_archive uses only softcut (in crone). run-dspm.sh loads +
-# inits the script after boot. Audio monitor stream: crone softcut output ->
-# darkice -> icecast on :8002 (host :8000 is taken by YunoHost icecast).
+# inits the script after boot. Audio monitor: crone softcut output -> darkice ->
+# the HOST YunoHost icecast on :8000, mount /norns.mp3 -> public at
+# https://radio.hetti.be/norns.mp3 (the box already serves that icecast).
 #
 # Mounted over the image's baked-in /home/we/start_norns.sh (the Dockerfile CMD).
 export DISPLAY=:0
@@ -33,11 +34,9 @@ sleep 1
 cd /home/we/maiden && ./maiden server --app ./app/build --data ~/dust --doc ~/norns/doc &
 sleep 1
 
-# audio monitor stream: icecast(:8002) <- darkice <- crone softcut output.
-# wait for icecast to accept before starting darkice, and keep darkice respawning.
-icecast2 -c /etc/icecast2/icecast.xml &
-for i in $(seq 1 30); do (exec 3<>/dev/tcp/127.0.0.1/8002) 2>/dev/null && { exec 3>&- 3<&-; break; }; sleep 0.5; done
-sleep 1
+# audio monitor: softcut output -> darkice -> host icecast :8000 (/norns.mp3).
+# the host icecast is always up; keep darkice respawning (it exits on a refused
+# connect), and (re)connect the jack ports once darkice registers.
 ( while true; do darkice -c /etc/darkice.cfg > /tmp/darkice.log 2>&1; sleep 2; done ) &
 sleep 3
 ( for i in $(seq 1 30); do
@@ -45,5 +44,5 @@ sleep 3
     sleep 1
   done ) &
 
-echo "start_norns: up (host-net). matron :5555  maiden :5000  screen :8889  radio :8002/radio.mp3  osc udp/10111"
+echo "start_norns: up (host-net). matron :5555  maiden :5000  screen :8889  radio https://radio.hetti.be/norns.mp3  osc udp/10111"
 tail -f /dev/null
