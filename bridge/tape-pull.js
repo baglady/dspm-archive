@@ -35,26 +35,66 @@ const SESSIONS_DIR = process.env.SESSIONS_DIR || path.join(__dirname, '..', 'ses
 const NORNS_HOST = process.env.NORNS_HOST || '10.42.0.1'
 const NORNS_SSH_USER = process.env.NORNS_SSH_USER || 'we'
 const NORNS_TAPE_DIR = process.env.NORNS_TAPE_DIR || '/home/we/dust/audio/tape'
+// When the norns runs in Docker with dust bind-mounted on the host (see
+// deploy/norns-docker/), set NORNS_TAPE_LOCAL_DIR to the host path of the tape
+// folder (e.g. /home/baglady/norns-desktop/dust/audio/tape). pullTape() will
+// do a local fs.copyFile instead of scp -- no SSH needed.
+const NORNS_TAPE_LOCAL_DIR = process.env.NORNS_TAPE_LOCAL_DIR || ''
+
+function patchManifest(targetDir, wav) {
+  try {
+    const mp = path.join(targetDir, 'manifest.json')
+    const m = JSON.parse(fs.readFileSync(mp, 'utf8'))
+    m.tape_file = wav
+    fs.writeFileSync(mp, JSON.stringify(m, null, 2))
+  } catch (e) { /* no manifest -- file still landed */ }
+}
 
 // Pull <name>.wav from the norns into targetDir, then set manifest.tape_file.
 //
+// Two modes:
+//   local  - NORNS_TAPE_LOCAL_DIR set: dust is bind-mounted on the host, just
+//            copy the file directly (Docker norns on the same machine).
+//   remote - default: scp from the norns over SSH (physical norns on the LAN).
+//
 // norns flushes the tape file a moment after tape_record_stop(), so the first
-// scp can race the close. We retry a few times before giving up; on final
+// copy can race the close. We retry a few times before giving up; on final
 // failure we log and call back with the error -- the take is still on the
 // norns and recoverable by hand (or by re-running this script).
 function pullTape(targetDir, name, opts, done) {
   if (typeof opts === 'function') { done = opts; opts = {} }
   opts = opts || {}
   done = done || (() => {})
-  const host = opts.host || NORNS_HOST
-  const user = opts.user || NORNS_SSH_USER
-  const tapeDir = opts.tapeDir || NORNS_TAPE_DIR
   const wav = name.endsWith('.wav') ? name : `${name}.wav`
-  const remote = `${user}@${host}:${tapeDir}/${wav}`
   const dest = path.join(targetDir, wav)
   const tries = opts.tries != null ? opts.tries : 4
   const delayMs = opts.delayMs != null ? opts.delayMs : 1500
 
+  const localDir = opts.localTapeDir || NORNS_TAPE_LOCAL_DIR
+  if (localDir) {
+    // Local copy path: dust bind-mounted on the host (Docker norns)
+    const src = path.join(localDir, wav)
+    const attempt = (n) => {
+      fs.copyFile(src, dest, (err) => {
+        if (!err) {
+          patchManifest(targetDir, wav)
+          console.log(`[tape-pull] local ${wav} -> ${path.basename(targetDir)}`)
+          return done(null, dest)
+        }
+        if (n < tries) return setTimeout(() => attempt(n + 1), delayMs)
+        console.error(`[tape-pull] failed (${tries} tries): ${src} -- ${err.message}`)
+        done(err)
+      })
+    }
+    setTimeout(() => attempt(1), delayMs)
+    return
+  }
+
+  // Remote SCP path: physical norns on the LAN
+  const host = opts.host || NORNS_HOST
+  const user = opts.user || NORNS_SSH_USER
+  const tapeDir = opts.tapeDir || NORNS_TAPE_DIR
+  const remote = `${user}@${host}:${tapeDir}/${wav}`
   const attempt = (n) => {
     // BatchMode=yes makes a missing key fail fast instead of hanging on a
     // password prompt; StrictHostKeyChecking=no avoids the first-connect TOFU
@@ -62,12 +102,7 @@ function pullTape(targetDir, name, opts, done) {
     execFile('scp', ['-o', 'StrictHostKeyChecking=no', '-o', 'BatchMode=yes',
       remote, dest], (err) => {
       if (!err) {
-        try {
-          const mp = path.join(targetDir, 'manifest.json')
-          const m = JSON.parse(fs.readFileSync(mp, 'utf8'))
-          m.tape_file = wav
-          fs.writeFileSync(mp, JSON.stringify(m, null, 2))
-        } catch (e) { /* no manifest -- file still landed */ }
+        patchManifest(targetDir, wav)
         console.log(`[tape-pull] ${wav} -> ${path.basename(targetDir)}`)
         return done(null, dest)
       }
@@ -90,12 +125,13 @@ if (require.main === module) {
     if (argv[i] === '--host') opts.host = argv[++i]
     else if (argv[i] === '--user') opts.user = argv[++i]
     else if (argv[i] === '--tape-dir') opts.tapeDir = argv[++i]
+    else if (argv[i] === '--local-tape-dir') opts.localTapeDir = argv[++i]
     else pos.push(argv[i])
   }
   const sessionId = pos[0]
   let name = pos[1]
   if (!sessionId) {
-    console.error('usage: node tape-pull.js <session-id> [tape-name] [--host H] [--user U]')
+    console.error('usage: node tape-pull.js <session-id> [tape-name] [--host H] [--user U] [--local-tape-dir PATH]')
     process.exit(1)
   }
   const sDir = path.join(SESSIONS_DIR, sessionId)

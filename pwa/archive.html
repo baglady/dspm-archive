@@ -154,6 +154,16 @@
 
   #empty-state .big { font-size: 32px; opacity: 0.2; }
 
+  /* ---- audio ---- */
+  #audio-wrap {
+    display: none;
+    padding: 8px 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  #audio-wrap.has-audio { display: block; }
+  #main-audio { width: 100%; }
+
   /* ---- video ---- */
   #video-wrap {
     background: #000;
@@ -460,6 +470,10 @@
     <div id="empty-state">
       <div class="big">◈</div>
       <div>select a session</div>
+    </div>
+
+    <div id="audio-wrap">
+      <audio id="main-audio" controls preload="metadata"></audio>
     </div>
 
     <div id="video-wrap">

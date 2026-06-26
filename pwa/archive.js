@@ -80,6 +80,8 @@ let hoverT = null       // timeline hover time
 const statusEl = document.getElementById('ws-status')
 const sessionItemsEl = document.getElementById('session-items')
 const emptyEl = document.getElementById('empty-state')
+const audioWrapEl = document.getElementById('audio-wrap')
+const audioEl = document.getElementById('main-audio')
 const videoWrapEl = document.getElementById('video-wrap')
 const videoEl = document.getElementById('main-video')
 const videoOffsetEl = document.getElementById('video-offset')
@@ -151,9 +153,10 @@ function renderSessionList() {
     item.className = 'session-item' + (s.id === currentId ? ' active' : '')
     item.dataset.id = s.id
 
-    const date = s.t0 ? new Date(s.t0 * 1000).toLocaleString([], {
-      month: 'short', day: 'numeric',
+    const date = s.t0 ? new Date(s.t0 * 1000).toLocaleString('en-GB', {
+      year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
+      timeZone: 'UTC', timeZoneName: 'short',
     }) : s.id
 
     const dur = s.duration ? formatTime(s.duration) : '—'
@@ -202,10 +205,19 @@ async function openSession(id) {
     if (typeof editorOnSession === 'function') editorOnSession(id, manifest)
   } catch (e) {}
 
-  // Check for video
+  // Check for audio (tape WAV) and video
   try {
     const r = await fetch(API_BASE + '/api/sessions/' + encodeURIComponent(id) + '/media')
     const files = await r.json()
+    const aud = files.find(f => /\.(wav|mp3|ogg)$/i.test(f))
+    if (aud) {
+      audioEl.src = API_BASE + '/api/sessions/' + encodeURIComponent(id) + '/media/' + encodeURIComponent(aud)
+      audioEl.load()
+      audioWrapEl.classList.add('has-audio')
+    } else {
+      audioEl.src = ''
+      audioWrapEl.classList.remove('has-audio')
+    }
     const vid = files.find(f => /\.(mp4|mov|webm)$/i.test(f))
     if (vid) {
       videoEl.src = API_BASE + '/api/sessions/' + encodeURIComponent(id) + '/media/' + encodeURIComponent(vid)
@@ -215,7 +227,7 @@ async function openSession(id) {
       videoEl.src = ''
       videoWrapEl.classList.remove('has-video')
     }
-  } catch (e) { videoWrapEl.classList.remove('has-video') }
+  } catch (e) { audioWrapEl.classList.remove('has-audio'); videoWrapEl.classList.remove('has-video') }
 
   // Load into bridge playback
   wsSend({ type: 'pb_cmd', action: 'load', id })
