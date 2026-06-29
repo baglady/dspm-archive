@@ -23,6 +23,10 @@ ingress:
   # The bridge upgrades the same port to WebSocket; cloudflared proxies WS
   # automatically -- no extra config needed. resolveBridgeUrl() in pwa/app.js
   # falls through to the page's own https host, so it picks wss:// here for free.
+  # Service dashboard — all services in one place.
+  - hostname: dash.yourdomain.com
+    service: http://localhost:8081
+
   - hostname: norns.yourdomain.com
     service: http://localhost:8081
     originRequest:

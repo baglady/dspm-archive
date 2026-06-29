@@ -776,6 +776,11 @@ function handleRequest(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token')
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
   const urlObj = new URL(req.url, 'http://localhost')
+  const host = (req.headers.host || '').split(':')[0]
+  if (host === 'dash.hetti.be' && urlObj.pathname === '/') {
+    req.url = '/dashboard.html'
+    return serveStatic(req, res)
+  }
   if (urlObj.pathname === '/admin/crowd') return handleAdmin(req, res, urlObj)
   if (urlObj.pathname.startsWith('/hook/')) return handleHook(req, res, urlObj)
   if (urlObj.pathname.startsWith('/api/')) return handleApi(req, res, urlObj)

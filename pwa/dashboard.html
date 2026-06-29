@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hetti.be — dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #fff; color: #111; min-height: 100vh; padding: 2rem 1.5rem 4rem; max-width: 960px; margin: 0 auto; }
+header { margin-bottom: 2rem; }
+h1 { font-size: 1rem; font-weight: 400; color: #aaa; }
+h1 strong { color: #111; font-weight: 500; }
+.norns-bar { background: #f5f5f5; border: 0.5px solid #e0e0e0; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 2.5rem; flex-wrap: wrap; }
+.norns-bar-label { font-size: 0.78rem; color: #666; white-space: nowrap; }
+.norns-bar audio { flex: 1; height: 28px; min-width: 180px; }
+.norns-bar a { font-size: 0.7rem; color: #bbb; text-decoration: none; white-space: nowrap; }
+.norns-bar a:hover { color: #666; }
+.section { margin-bottom: 2.5rem; }
+.section-label { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #bbb; margin-bottom: 0.6rem; padding-bottom: 0.5rem; border-bottom: 0.5px solid #eee; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 6px; }
+.grid.wide { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+a.card, div.card { display: block; background: #fafafa; border: 0.5px solid #e8e8e8; border-radius: 8px; padding: 11px 14px; text-decoration: none; color: inherit; transition: background 0.12s, border-color 0.12s; }
+a.card:hover { background: #f0f0f0; border-color: #d0d0d0; }
+.card-name { font-size: 0.82rem; font-weight: 500; color: #111; display: block; }
+.card-url { font-size: 0.65rem; color: #bbb; display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-desc { font-size: 0.68rem; color: #999; display: block; margin-top: 3px; }
+.tags { margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap; }
+.tag { display: inline-block; font-size: 0.58rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 5px; border-radius: 3px; }
+.tag-private { background: #f0f0f0; color: #aaa; border: 0.5px solid #ddd; }
+.tag-broken  { background: #fff8e0; color: #b07800; border: 0.5px solid #f0d060; }
+.tag-local   { background: #edfaed; color: #2a7a2a; border: 0.5px solid #b0ddb0; }
+.tag-docker  { background: #ede8ff; color: #5500bb; border: 0.5px solid #c8b8f0; }
+.tag-port    { background: #f0f0f0; color: #888; border: 0.5px solid #ddd; font-family: monospace; letter-spacing: 0; }
+</style>
+</head>
+<body>
+<header><h1>hetti.be / <strong>dashboard</strong></h1></header>
+
+<div class="norns-bar">
+  <span class="norns-bar-label">norns stream</span>
+  <audio controls src="https://radio.hetti.be/norns.mp3"></audio>
+  <a href="https://radio.hetti.be/norns.mp3" target="_blank">radio.hetti.be/norns.mp3</a>
+</div>
+
+<div class="section">
+  <div class="section-label">dspm — barcode looper</div>
+  <div class="grid wide">
+    <a class="card" href="https://dspm.hetti.be/" target="_blank"><span class="card-name">audience PWA</span><span class="card-url">dspm.hetti.be/</span><span class="card-desc">phone XY controller for crowd</span></a>
+    <a class="card" href="https://dspm.hetti.be/performer.html" target="_blank"><span class="card-name">performer</span><span class="card-url">dspm.hetti.be/performer.html</span><span class="card-desc">full controls, token-gated</span></a>
+    <a class="card" href="https://dspm.hetti.be/archive.html" target="_blank"><span class="card-name">archive</span><span class="card-url">dspm.hetti.be/archive.html</span><span class="card-desc">session recordings + renders</span></a>
+    <a class="card" href="https://dspm.hetti.be/guests.html" target="_blank"><span class="card-name">guests</span><span class="card-url">dspm.hetti.be/guests.html</span><span class="card-desc">venue phone join page</span></a>
+    <a class="card" href="https://dspm.hetti.be/launch.html" target="_blank"><span class="card-name">launch</span><span class="card-url">dspm.hetti.be/launch.html</span><span class="card-desc">system startup screen</span></a>
+    <a class="card" href="https://dspm.hetti.be/admin/crowd" target="_blank"><span class="card-name">crowd gate</span><span class="card-url">dspm.hetti.be/admin/crowd</span><span class="card-desc">kill-switch / gain dimmer</span><div class="tags"><span class="tag tag-private">admin</span></div></a>
+    <a class="card" href="https://hetti.be" target="_blank"><span class="card-name">hetti.be</span><span class="card-url">hetti.be</span><span class="card-desc">living art archive / landing</span></a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">local tools</div>
+  <div class="grid wide">
+    <a class="card" href="http://localhost:4000" target="_blank"><span class="card-name">session labeler</span><span class="card-url">localhost:4000</span><span class="card-desc">post-show metadata editor</span><div class="tags"><span class="tag tag-local">local</span><span class="tag tag-port">:4000</span></div></a>
+    <a class="card" href="http://localhost:8082" target="_blank"><span class="card-name">octatrack control</span><span class="card-url">localhost:8082</span><span class="card-desc">PWA → WS → MIDI CC surface</span><div class="tags"><span class="tag tag-local">local</span><span class="tag tag-port">:8082</span></div></a>
+    <a class="card" href="http://localhost:8083" target="_blank"><span class="card-name">mbase01 control</span><span class="card-url">localhost:8083</span><span class="card-desc">12-knob Jomox MBase 01</span><div class="tags"><span class="tag tag-local">local</span><span class="tag tag-port">:8083</span></div></a>
+    <a class="card" href="http://localhost:8084" target="_blank"><span class="card-name">analog rytm control</span><span class="card-url">localhost:8084</span><span class="card-desc">PWA → WS → MIDI CC surface</span><div class="tags"><span class="tag tag-local">local</span><span class="tag tag-port">:8084</span></div></a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">norns in Docker — babayaga</div>
+  <div class="grid wide">
+    <div class="card"><span class="card-name">norns-desktop</span><span class="card-url">dspm-norns.service</span><span class="card-desc">schollz/norns-desktop, softcut looper</span><div class="tags"><span class="tag tag-docker">docker</span></div></div>
+    <div class="card"><span class="card-name">matron REPL</span><span class="card-url">babayaga :5555 (loopback)</span><span class="card-desc">Lua REPL</span><div class="tags"><span class="tag tag-docker">docker</span><span class="tag tag-private">loopback</span></div></div>
+    <div class="card"><span class="card-name">maiden</span><span class="card-url">babayaga :5000 (loopback)</span><span class="card-desc">norns web IDE</span><div class="tags"><span class="tag tag-docker">docker</span><span class="tag tag-private">loopback</span></div></div>
+    <div class="card"><span class="card-name">darkice → icecast</span><span class="card-url">babayaga :8000/norns.mp3</span><span class="card-desc">softcut out → radio.hetti.be</span><div class="tags"><span class="tag tag-docker">docker</span></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">media — public via hetti.be</div>
+  <div class="grid">
+    <a class="card" href="https://watch.hetti.be" target="_blank"><span class="card-name">jellyfin</span><span class="card-url">watch.hetti.be</span><span class="card-desc">movies &amp; TV</span></a>
+    <a class="card" href="https://music.hetti.be" target="_blank"><span class="card-name">navidrome</span><span class="card-url">music.hetti.be</span><span class="card-desc">music library</span></a>
+    <a class="card" href="https://audiobooks.hetti.be" target="_blank"><span class="card-name">audiobookshelf</span><span class="card-url">audiobooks.hetti.be</span><span class="card-desc">audiobooks &amp; podcasts</span></a>
+    <a class="card" href="https://funk.hetti.be" target="_blank"><span class="card-name">funkwhale</span><span class="card-url">funk.hetti.be</span><span class="card-desc">social music</span></a>
+    <a class="card" href="https://radio.hetti.be" target="_blank"><span class="card-name">icecast2</span><span class="card-url">radio.hetti.be</span><span class="card-desc">live radio streams</span></a>
+    <a class="card" href="https://camp.hetti.be" target="_blank"><span class="card-name">faircamp</span><span class="card-url">camp.hetti.be</span><span class="card-desc">releases</span></a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">files &amp; cloud — public via hetti.be</div>
+  <div class="grid">
+    <a class="card" href="https://cloud.hetti.be" target="_blank"><span class="card-name">nextcloud</span><span class="card-url">cloud.hetti.be</span><span class="card-desc">files, calendar, notes</span></a>
+    <a class="card" href="https://books.hetti.be" target="_blank"><span class="card-name">calibre-web</span><span class="card-url">books.hetti.be</span><span class="card-desc">ebook library</span></a>
+    <a class="card" href="https://img.hetti.be" target="_blank"><span class="card-name">lutim</span><span class="card-url">img.hetti.be</span><span class="card-desc">image hosting</span></a>
+    <a class="card" href="https://drop.hetti.be" target="_blank"><span class="card-name">lufi</span><span class="card-url">drop.hetti.be</span><span class="card-desc">file drop</span></a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">fun — public via hetti.be</div>
+  <div class="grid">
+    <a class="card" href="https://arcade.hetti.be" target="_blank"><span class="card-name">retroarch</span><span class="card-url">arcade.hetti.be</span><span class="card-desc">browser emulator</span></a>
+    <a class="card" href="https://bagworld.babayaga.nohost.me" target="_blank"><span class="card-name">pixelfed</span><span class="card-url">bagworld.babayaga.nohost.me</span><span class="card-desc">photo feed (not migrated)</span><div class="tags"><span class="tag tag-private">nohost only</span></div></a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">private — babayaga.nohost.me (LAN / Tailscale)</div>
+  <div class="grid">
+    <a class="card" href="http://babayaga.nohost.me/yunohost/admin" target="_blank"><span class="card-name">yunohost admin</span><span class="card-url">/yunohost/admin</span></a>
+    <a class="card" href="http://babayaga.nohost.me/guacamole" target="_blank"><span class="card-name">guacamole</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">remote desktop gateway</span></a>
+    <a class="card" href="http://babayaga.nohost.me/n8n" target="_blank"><span class="card-name">n8n</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">workflow automation</span></a>
+    <a class="card" href="http://babayaga.nohost.me/huginn" target="_blank"><span class="card-name">huginn</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">agent automation</span></a>
+    <a class="card" href="http://babayaga.nohost.me/syncthing" target="_blank"><span class="card-name">syncthing</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">file sync</span></a>
+    <a class="card" href="http://babayaga.nohost.me/localai" target="_blank"><span class="card-name">localai</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">local LLM API</span></a>
+    <a class="card" href="http://babayaga.nohost.me/mitra" target="_blank"><span class="card-name">mitra</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">fediverse instance</span></a>
+    <a class="card" href="http://babayaga.nohost.me/dex" target="_blank"><span class="card-name">dex</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">OIDC provider</span></a>
+    <a class="card" href="http://babayaga.nohost.me/faceprivacy" target="_blank"><span class="card-name">faceprivacy</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">face blurring tool</span></a>
+    <a class="card" href="http://babayaga.nohost.me/opensondage" target="_blank"><span class="card-name">opensondage</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">polls / scheduling</span></a>
+    <a class="card" href="http://babayaga.nohost.me/anarchism" target="_blank"><span class="card-name">anarchism</span><span class="card-url">babayaga.nohost.me</span></a>
+    <a class="card" href="http://babayaga.nohost.me" target="_blank"><span class="card-name">mail</span><span class="card-url">babayaga.nohost.me</span><span class="card-desc">YunoHost webmail</span></a>
+    <a class="card" href="#" onclick="return false"><span class="card-name">headscale</span><span class="card-url">head.babayaga.nohost.me</span><span class="card-desc">self-hosted Tailscale control</span><div class="tags"><span class="tag tag-broken">broken</span></div></a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">infrastructure — babayaga</div>
+  <div class="grid wide">
+    <div class="card"><span class="card-name">dspm-bridge</span><span class="card-url">systemd · babayaga :8081</span><span class="card-desc">Node, OSC + WS + HTTP</span></div>
+    <div class="card"><span class="card-name">cloudflared</span><span class="card-url">systemd · tunnel: dspm</span><span class="card-desc">outbound Cloudflare named tunnel</span></div>
+    <div class="card"><span class="card-name">tailscale</span><span class="card-url">100.103.9.125</span><span class="card-desc">snares-anaconda.ts.net</span></div>
+    <div class="card"><span class="card-name">nginx</span><span class="card-url">babayaga :80/:443</span><span class="card-desc">YunoHost reverse proxy</span></div>
+    <div class="card"><span class="card-name">nftables</span><span class="card-url">babayaga inet filter</span><span class="card-desc">firewall, drop policy; LAN+tailscale rules for :8081</span></div>
+    <div class="card"><span class="card-name">fail2ban</span><span class="card-url">babayaga</span><span class="card-desc">13 active jails</span></div>
+    <div class="card"><span class="card-name">icecast2</span><span class="card-url">babayaga :8000 (host)</span><span class="card-desc">audio server, not Docker</span></div>
+  </div>
+</div>
+
+</body>
+</html>
