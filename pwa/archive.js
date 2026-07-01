@@ -131,6 +131,7 @@ function onPbMsg(msg) {
   updateScrub()
   updateTimeDisplay()
   syncVideo()
+  syncAudio()
 }
 
 // ---- session list ----------------------------------------------------------
@@ -413,6 +414,7 @@ function seekTo(t) {
   updateScrub()
   updateTimeDisplay()
   syncVideo()
+  syncAudio()
   drawTimeline()
 }
 
@@ -446,6 +448,17 @@ function syncVideo() {
   if (Math.abs(videoEl.currentTime - target) > 0.3) videoEl.currentTime = Math.max(0, target)
   if (pbPlaying && videoEl.paused) videoEl.play().catch(() => {})
   if (!pbPlaying && !videoEl.paused) videoEl.pause()
+}
+
+// ---- audio (tape WAV) sync -------------------------------------------------
+// The tape was recorded over the take's window, which the timeline is rebased
+// to (t=0 = take start), so the WAV maps 1:1 onto pbT -- follow playback so
+// PLAY actually produces the recorded audio.
+function syncAudio() {
+  if (!audioEl.src) return
+  if (Math.abs(audioEl.currentTime - pbT) > 0.3) audioEl.currentTime = Math.max(0, pbT)
+  if (pbPlaying && audioEl.paused) audioEl.play().catch(() => {})
+  if (!pbPlaying && !audioEl.paused) audioEl.pause()
 }
 
 videoOffsetEl.addEventListener('change', () => {

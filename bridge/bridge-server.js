@@ -216,6 +216,36 @@ function readJsonlFile(fp) {
   } catch (e) { return [] }
 }
 
+// A session's log spans the whole time the bridge ran that day (often hours of
+// soundcheck/noodling), but a named take -- manifest.recording{name,start_t,
+// end_t} -- is just one window inside it. The archive should show the TAKE, not
+// the 8-hour haystack: without this, the timeline is hours long, PLAY starts in
+// dead air far before the music, and the payload is needlessly huge. So when a
+// recording window exists we clip every timed entry to [start_t, end_t] and
+// rebase t so the take starts at 0 -- which also lines up with the tape WAV,
+// which was recorded over exactly that window. No window -> return as-is.
+function recordingWindow(sDir) {
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(sDir, 'manifest.json'), 'utf8'))
+    const r = m.recording || {}
+    const s = Number(r.start_t), e = Number(r.end_t)
+    if (Number.isFinite(s) && Number.isFinite(e) && e > s) return { start: s, end: e }
+  } catch (_) {}
+  return null
+}
+
+function scopeEntries(sDir, entries) {
+  const w = recordingWindow(sDir)
+  if (!w) return entries
+  const out = []
+  for (const en of entries) {
+    if (typeof en.t !== 'number') { out.push(en); continue }
+    if (en.t < w.start || en.t > w.end) continue
+    out.push(Object.assign({}, en, { t: en.t - w.start }))
+  }
+  return out
+}
+
 // ---- OSC out to norns (and feedback in from norns) ------------------------
 // One UDP socket: bound to FEEDBACK_PORT for inbound feedback, sending to
 // norns. Binding the send socket to FEEDBACK_PORT also means norns sees our
@@ -625,7 +655,7 @@ function handleApi(req, res, urlObj) {
     }
 
     if (sub === 'ticks') {
-      const data = readJsonlFile(path.join(sDir, 'bridge_ticks.jsonl'))
+      const data = scopeEntries(sDir, readJsonlFile(path.join(sDir, 'bridge_ticks.jsonl')))
       res.writeHead(200, { 'Content-Type': 'application/json' })
       return res.end(JSON.stringify(data))
     }
@@ -929,7 +959,10 @@ const pb = {
 
 function pbLoad(id) {
   pbStop()
-  pb.ticks = readJsonlFile(path.join(SESSIONS_DIR, id, 'bridge_ticks.jsonl'))
+  const sDir = path.join(SESSIONS_DIR, id)
+  // Scope to the recording window (rebased to 0) so playback matches the
+  // archive timeline and the tape WAV -- see scopeEntries().
+  pb.ticks = scopeEntries(sDir, readJsonlFile(path.join(sDir, 'bridge_ticks.jsonl')))
     .filter(e => e.type === 'tick')
   pb.sessionId = id
   pb.active = true
