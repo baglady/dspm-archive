@@ -1,4 +1,6 @@
-# go-lan.ps1 -- ONE-SHOT LAN-only venue launcher (no internet needed).
+# go-lan.ps1 -- ONE-SHOT LAN-only venue launcher for dspm-archive (barcode only).
+# For the full 7-script play-along rig (barcode / oooooo / passersby / molly /
+# awake / cranes / mangl), use ../dspm-playalong/go-lan.ps1 instead.
 # Double-click won't work; run from the repo root in PowerShell:
 #     powershell -ExecutionPolicy Bypass -File .\go-lan.ps1
 #
