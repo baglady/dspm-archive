@@ -1,0 +1,8 @@
+{"q": "What IP address does the norns have on the travel router, and is it wired or wifi?", "expect_all": ["192.168.8.180"], "expect_any": ["wired", "ethernet", "cable"]}
+{"q": "Phones load the audience page fine but moving the XY pads does nothing on the norns. What do I check first?", "expect_any": ["wi-fi", "wifi", "gl-sft1200", "wrong network", "ssid"]}
+{"q": "What environment variable must be set before starting the bridge by hand, and to what value?", "expect_all": ["NORNS_HOST", "192.168.8.180"]}
+{"q": "Why does /radio.mp3 return a 502 error in the woods, and is that a problem?", "expect_any": ["icecast", "debian", "home", "internet-only", "expected"]}
+{"q": "What URL do audience phones open to get the control UI?", "expect_all": ["8081"]}
+{"q": "How do I turn a brand-new norns script into a phone controller with no internet?", "expect_any": ["parse_params", "ai_curate", "build_controller"]}
+{"q": "A phone is showing an old stale version of the UI. How do I fix it?", "expect_any": ["hard-reload", "hard reload", "service worker", "service-worker", "cache"]}
+{"q": "The norns is unreachable but my wifi is fine. Where do I look?", "expect_any": ["ethernet", "cable", "power", "192.168.8.1", "client list"]}

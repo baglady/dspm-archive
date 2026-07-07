@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSPM status board</title>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --panel: #16181f;
+    --card: #1c1f28;
+    --border: #2a2e3a;
+    --text: #d8dbe4;
+    --dim: #8a8fa3;
+    --accent: #7bd88f;
+
+    --c-idea: #8a8fa3;
+    --c-building: #6aa9ff;
+    --c-needs-testing: #ffb454;
+    --c-tested: #7bd88f;
+    --c-live: #c792ea;
+    --c-parked: #4a4e5c;
+
+    --a-show-rig: #ff6188;
+    --a-norns: #7bd88f;
+    --a-midi-gear: #ffb454;
+    --a-visuals: #c792ea;
+    --a-ai-tools: #6aa9ff;
+    --a-infra: #78dce8;
+    --a-skills: #e6db74;
+    --a-audio-tools: #fc9867;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px;
+    background: var(--bg); color: var(--text);
+    font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+  }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  h1 { font-size: 18px; margin: 0; letter-spacing: .04em; }
+  h1 span { color: var(--accent); }
+  #summary { color: var(--dim); font-size: 13px; }
+  #summary b { color: var(--c-needs-testing); }
+
+  #controls { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 14px; align-items: center; }
+  .chip {
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px 10px; cursor: pointer; user-select: none;
+    background: var(--panel); color: var(--dim); font-size: 12px;
+  }
+  .chip.on { color: var(--text); border-color: var(--chipc, var(--accent)); box-shadow: inset 0 0 0 1px var(--chipc, var(--accent)); }
+  .chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--chipc); margin-right: 5px; }
+  #search {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 4px 10px; font-size: 13px; width: 180px;
+  }
+  #search:focus { outline: none; border-color: var(--accent); }
+
+  #board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; align-items: start; }
+  .col { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
+  .col h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .1em;
+    margin: 4px 6px 10px; display: flex; justify-content: space-between;
+    color: var(--colc);
+  }
+  .col h2 .n { color: var(--dim); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-left: 3px solid var(--areac, var(--border));
+    border-radius: 8px; padding: 9px 10px; margin-bottom: 8px;
+  }
+  .card h3 { margin: 0 0 4px; font-size: 13.5px; font-weight: 600; }
+  .meta { display: flex; gap: 8px; align-items: center; font-size: 11px; color: var(--dim); margin-bottom: 4px; }
+  .area-tag { color: var(--areac); }
+  .checks { margin: 4px 0 0; padding: 0; list-style: none; font-size: 12px; }
+  .checks li { margin: 1px 0; color: var(--dim); }
+  .checks li.ok::before  { content: "✅ "; font-size: 10px; }
+  .checks li.todo        { color: var(--c-needs-testing); }
+  .checks li.todo::before{ content: "⬜ "; font-size: 10px; }
+  .note { font-size: 12px; color: var(--dim); font-style: italic; margin-top: 5px; }
+  .links { margin-top: 5px; font-size: 11px; }
+  .links code { background: #12141a; border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; margin-right: 4px; color: #9fb4d8; }
+  .stale { color: var(--c-needs-testing); }
+  .empty { color: var(--dim); font-size: 12px; text-align: center; padding: 12px 0; }
+  footer { margin-top: 14px; color: var(--dim); font-size: 11.5px; }
+  footer code { color: #9fb4d8; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DSPM <span>status board</span></h1>
+  <div id="summary"></div>
+</header>
+<div id="controls">
+  <input id="search" type="search" placeholder="filter…">
+  <span id="areaChips"></span>
+</div>
+<div id="board"></div>
+<footer>
+  Source of truth: <code>tools/status-board/projects.js</code> — edit it, refresh this page.
+  Stages: idea → building → needs-testing → tested → live (parked = superseded).
+</footer>
+
+<script src="projects.js"></script>
+<script>
+  const STAGES = [
+    { id: "idea",          label: "Idea / Planned" },
+    { id: "building",      label: "Building" },
+    { id: "needs-testing", label: "Needs testing" },
+    { id: "tested",        label: "Tested" },
+    { id: "live",          label: "Live / Battle-tested" },
+    { id: "parked",        label: "Parked" },
+  ];
+  const AREAS = ["show-rig","norns","midi-gear","visuals","ai-tools","infra","skills","audio-tools"];
+  const activeAreas = new Set(AREAS);
+  let query = "";
+
+  const STALE_DAYS = 21;
+  const today = new Date();
+  const daysAgo = d => Math.round((today - new Date(d)) / 864e5);
+
+  function areaChips() {
+    const el = document.getElementById("areaChips");
+    el.innerHTML = AREAS.map(a =>
+      `<span class="chip on" data-area="${a}" style="--chipc:var(--a-${a})"><span class="dot"></span>${a}</span>`
+    ).join("");
+    el.querySelectorAll(".chip").forEach(c => c.onclick = () => {
+      const a = c.dataset.area;
+      // click = solo the area; click again while solo = back to all
+      if (activeAreas.size === 1 && activeAreas.has(a)) {
+        AREAS.forEach(x => activeAreas.add(x));
+      } else {
+        activeAreas.clear(); activeAreas.add(a);
+      }
+      el.querySelectorAll(".chip").forEach(x =>
+        x.classList.toggle("on", activeAreas.has(x.dataset.area)));
+      render();
+    });
+  }
+
+  function card(p) {
+    const stale = daysAgo(p.updated) > STALE_DAYS;
+    const checks =
+      (p.tested   || []).map(t => `<li class="ok">${t}</li>`).join("") +
+      (p.untested || []).map(t => `<li class="todo">${t}</li>`).join("");
+    return `<div class="card" style="--areac:var(--a-${p.area})">
+      <h3>${p.name}</h3>
+      <div class="meta">
+        <span class="area-tag">${p.area}</span>
+        <span class="${stale ? "stale" : ""}">${p.updated}${stale ? " · stale" : ""}</span>
+      </div>
+      ${checks ? `<ul class="checks">${checks}</ul>` : ""}
+      ${p.note ? `<div class="note">${p.note}</div>` : ""}
+      ${(p.links || []).length ? `<div class="links">${p.links.map(l => `<code>${l}</code>`).join("")}</div>` : ""}
+    </div>`;
+  }
+
+  function render() {
+    const q = query.toLowerCase();
+    const visible = window.PROJECTS.filter(p =>
+      activeAreas.has(p.area) &&
+      (!q || (p.name + " " + p.area + " " + (p.note||"") + " " +
+              (p.tested||[]).join(" ") + " " + (p.untested||[]).join(" ")).toLowerCase().includes(q)));
+
+    document.getElementById("board").innerHTML = STAGES.map(s => {
+      const items = visible.filter(p => p.stage === s.id);
+      return `<div class="col" style="--colc:var(--c-${s.id})">
+        <h2>${s.label} <span class="n">${items.length}</span></h2>
+        ${items.map(card).join("") || `<div class="empty">—</div>`}
+      </div>`;
+    }).join("");
+
+    const all = window.PROJECTS;
+    const todoCount = all.reduce((n,p) => n + (p.untested||[]).length, 0);
+    const needs = all.filter(p => p.stage === "needs-testing").length;
+    document.getElementById("summary").textContent = "";
+    document.getElementById("summary").innerHTML =
+      `${all.length} projects · <b>${needs} need testing</b> · ${todoCount} open test boxes · ` +
+      `${all.filter(p=>p.stage==="live").length} live`;
+  }
+
+  document.getElementById("search").addEventListener("input", e => { query = e.target.value; render(); });
+  areaChips();
+  render();
+</script>
+</body>
+</html>

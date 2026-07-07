@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "status-board",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", "tools/status-board", "-p", "8090", "-c-1"],
+      "port": 8090
+    },
+    {
       "name": "pwa",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "http-server", "pwa", "-p", "8080", "-c-1"],

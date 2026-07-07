@@ -196,6 +196,80 @@ input[type=range]::-webkit-slider-thumb {
   margin-top: -9px;
 }
 
+/* XY pads (same look as the audience page) */
+.xy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.xy-pad-wrap { display: flex; flex-direction: column; gap: 6px; }
+
+.xy-pad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--fd);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.xy-pad-header select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: var(--fd);
+  font-size: 10px;
+  padding: 3px 4px;
+  max-width: 38%;
+}
+
+.xy-pad-header select optgroup { background: var(--panel); color: var(--text-dim); font-style: normal; }
+.xy-pad-header select option   { background: var(--bg);    color: var(--text); }
+
+.xy-pad {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background:
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(0deg, var(--line) 0 1px, transparent 1px 25%),
+    var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  touch-action: none;
+  overflow: hidden;
+}
+
+.xy-pad .crosshair {
+  position: absolute;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  box-shadow: 0 0 16px var(--accent);
+  left: 50%;
+  top: 50%;
+}
+
+.xy-pad .axis-label {
+  position: absolute;
+  font-family: var(--fd);
+  font-size: 9px;
+  color: var(--text-dim);
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.axis-label.x-label { bottom: 4px; right: 6px; }
+.axis-label.y-label { top: 4px; left: 6px; writing-mode: vertical-rl; text-orientation: mixed; }
+
 /* Voice tabs */
 .tab-strip {
   display: flex;
@@ -440,6 +514,7 @@ footer {
 
 <footer>norns performer control · dspm-archive · <span id="bridge-url"></span></footer>
 
+<script src="config.js"></script>
 <script>
 // ============================================================
 // BRIDGE CONNECTION
@@ -696,6 +771,134 @@ function buildTransport() {
 }
 
 // ============================================================
+// XY PADS  (same TONE / SWIRL pads as the audience page)
+// Axis dropdowns over the FULL menu (config.js ALL_AXIS_GROUPS — this is the
+// unrestricted surface, so levels etc. are available here). Values are sent
+// raw 0..1; sends are throttled to ~20Hz like app.js so a six-voice combo
+// can't trip the bridge's per-phone rate limit.
+// ============================================================
+function buildXYPads() {
+  const clamp01 = (n) => Math.min(1, Math.max(0, n));
+  function throttle(fn, ms) {
+    let last = 0, timer = null, lastArgs = null;
+    return function (...args) {
+      lastArgs = args;
+      const now = performance.now();
+      const wait = ms - (now - last);
+      if (wait <= 0) {
+        last = now;
+        if (timer) { clearTimeout(timer); timer = null; }
+        fn(...args);
+      } else if (!timer) {
+        timer = setTimeout(() => { last = performance.now(); timer = null; fn(...lastArgs); }, wait);
+      }
+    };
+  }
+
+  const flat = [];
+  for (const grp of ALL_AXIS_GROUPS)
+    for (const opt of grp.options) flat.push({ group: grp.group, ...opt });
+  const findIdx = (path) => Math.max(0, flat.findIndex((o) => o.paths.includes(path)));
+
+  const sec = el("div", "sec");
+  sec.appendChild(el("h2", null, ["TOUCH PADS"]));
+  const grid = el("div", "xy-grid");
+
+  const PADS = [
+    { label: "TONE",  xPath: "/param/filter_frequency", yPath: "/param/filter_reso" },
+    { label: "SWIRL", xPath: "/barcode/v1/pan",         yPath: "/barcode/v1/rate"   },
+  ];
+
+  for (const padCfg of PADS) {
+    const wrap = el("div", "xy-pad-wrap");
+    const header = el("div", "xy-pad-header");
+    header.appendChild(el("span", null, [padCfg.label]));
+
+    const buildSelect = (prefix, defaultIndex) => {
+      const select = document.createElement("select");
+      let idx = 0;
+      for (const grp of ALL_AXIS_GROUPS) {
+        const og = document.createElement("optgroup");
+        og.label = grp.group;
+        for (const opt of grp.options) {
+          const o = document.createElement("option");
+          o.value = String(idx++);
+          o.textContent = prefix + ": " + opt.label;
+          og.appendChild(o);
+        }
+        select.appendChild(og);
+      }
+      select.value = String(defaultIndex);
+      return select;
+    };
+
+    const xSelect = buildSelect("X", findIdx(padCfg.xPath));
+    const ySelect = buildSelect("Y", findIdx(padCfg.yPath));
+    header.appendChild(xSelect);
+    header.appendChild(ySelect);
+
+    const pad = el("div", "xy-pad");
+    const crosshair = el("div", "crosshair");
+    const xLabel = el("div", "axis-label x-label", [flat[parseInt(xSelect.value)].label]);
+    const yLabel = el("div", "axis-label y-label", [flat[parseInt(ySelect.value)].label]);
+    pad.appendChild(crosshair);
+    pad.appendChild(xLabel);
+    pad.appendChild(yLabel);
+
+    const xOpt = () => flat[parseInt(xSelect.value)];
+    const yOpt = () => flat[parseInt(ySelect.value)];
+    let posX = 0.5, posY = 0.5, dragging = false;
+
+    const place = () => {
+      crosshair.style.left = (posX * 100) + "%";
+      crosshair.style.top = ((1 - posY) * 100) + "%";
+    };
+    place();
+
+    xSelect.addEventListener("change", () => { xLabel.textContent = xOpt().label; });
+    ySelect.addEventListener("change", () => { yLabel.textContent = yOpt().label; });
+
+    const send = throttle(() => {
+      for (const p of xOpt().paths) sendOSC(p, [posX]);
+      for (const p of yOpt().paths) sendOSC(p, [posY]);
+    }, 50);
+
+    const setFromClient = (cx, cy) => {
+      const rect = pad.getBoundingClientRect();
+      posX = clamp01((cx - rect.left) / rect.width);
+      posY = 1 - clamp01((cy - rect.top) / rect.height); // top = max
+      place();
+      send();
+    };
+
+    pad.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      pad.setPointerCapture(e.pointerId);
+      setFromClient(e.clientX, e.clientY);
+    });
+    pad.addEventListener("pointermove", (e) => { if (dragging) setFromClient(e.clientX, e.clientY); });
+    pad.addEventListener("pointerup", () => { dragging = false; });
+    pad.addEventListener("pointercancel", () => { dragging = false; });
+
+    // feedback: track norns state on whichever params the pad is pointed at
+    wsListeners.push((path, args) => {
+      if (dragging) return;
+      const v = Number(args && args[0]);
+      if (!Number.isFinite(v)) return;
+      if (xOpt().paths.includes(path)) { posX = clamp01(v); place(); }
+      if (yOpt().paths.includes(path)) { posY = clamp01(v); place(); }
+    });
+
+    wrap.appendChild(header);
+    wrap.appendChild(pad);
+    grid.appendChild(wrap);
+  }
+
+  sec.appendChild(grid);
+  return sec;
+}
+
+// ============================================================
 // GLOBAL CONTROLS
 // ============================================================
 function buildGlobal() {
@@ -802,6 +1005,7 @@ const app = document.getElementById("app");
 app.appendChild(buildCrowd());
 app.appendChild(buildReset());
 app.appendChild(buildTransport());
+app.appendChild(buildXYPads());
 app.appendChild(buildGlobal());
 app.appendChild(buildSlew());
 app.appendChild(buildVoices());

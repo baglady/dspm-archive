@@ -89,6 +89,10 @@ $env:NORNS_HOST         = '192.168.8.180'
 $env:NORNS_PORT         = '10111'
 $env:BRIDGE_WS_PORT     = '8081'
 $env:BRIDGE_ADMIN_TOKEN = 'dspm'
+# LAN radio monitor: point the bridge's /radio.mp3 proxy at the icecast mount
+# running on the physical norns (darkice + icecast2, see docs/PLAN-woods-radio.md).
+# Without this the proxy defaults to 127.0.0.1:8000 (the laptop) and 502s.
+$env:RADIO_URL          = 'http://192.168.8.180:8000/norns.mp3'
 Set-Location (Join-Path $root 'bridge')
 Write-Host "Starting bridge -> OSC to norns 192.168.8.180:10111.  Ctrl-C stops it and saves the session log." -ForegroundColor Cyan
 Write-Host ""

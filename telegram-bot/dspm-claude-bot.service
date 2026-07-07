@@ -1,0 +1,22 @@
+[Unit]
+Description=dspm Claude Telegram bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dspm
+WorkingDirectory=/opt/dspm-archive/telegram-bot
+ExecStart=/opt/dspm-archive/telegram-bot/venv/bin/python bot.py
+Restart=on-failure
+RestartSec=10
+
+# Secrets — edit /etc/dspm-claude-bot.env before enabling
+EnvironmentFile=/etc/dspm-claude-bot.env
+
+# Optional tuning
+Environment=WHISPER_MODEL=base
+Environment=MAX_HISTORY_TURNS=20
+
+[Install]
+WantedBy=multi-user.target

@@ -502,6 +502,11 @@ function renderXYPads(section) {
       continue;
     }
 
+    // ---- Dropdown pad: selectable axes ----------------------------------
+    // Options come from item.axisGroups; on the audience build that's the
+    // curated AUDIENCE_AXIS_GROUPS, where every option carries min/max/default
+    // range clamps (so the corners can't reach silence). Options without
+    // min/max (performer / full list) behave as plain 0..1.
     const wrap = el("div", "xy-pad-wrap");
 
     // Flatten grouped options into a single ordered list, remembering
@@ -518,6 +523,12 @@ function renderXYPads(section) {
 
     const defaultXIndex = Math.max(0, findIndexByPath(item.defaultXPath));
     const defaultYIndex = Math.max(0, findIndexByPath(item.defaultYPath));
+
+    const optRange = (o) => ({ min: o.min ?? 0, max: o.max ?? 1 });
+    const optDefaultPos = (o) => {
+      const { min, max } = optRange(o);
+      return valueToPos(o.default ?? (min + max) / 2, min, max);
+    };
 
     // header with axis selectors
     const header = el("div", "xy-pad-header");
@@ -557,32 +568,48 @@ function renderXYPads(section) {
     pad.appendChild(xLabel);
     pad.appendChild(yLabel);
 
+    // posX / posY are 0..1 pad coordinates (posY=1 is the TOP of the pad).
+    const xOpt = () => flat[parseInt(xSelect.value)];
+    const yOpt = () => flat[parseInt(ySelect.value)];
+    let posX = optDefaultPos(flat[defaultXIndex]);
+    let posY = optDefaultPos(flat[defaultYIndex]);
+
+    const place = () => {
+      crosshair.style.left = (posX * 100) + "%";
+      crosshair.style.top = ((1 - posY) * 100) + "%";
+    };
+    place();
+
+    // Repointing an axis moves the crosshair to the NEW option's resting spot
+    // (display only — nothing is sent until the pad is touched again).
     xSelect.addEventListener("change", () => {
-      xLabel.textContent = flat[parseInt(xSelect.value)].label;
+      xLabel.textContent = xOpt().label;
+      posX = optDefaultPos(xOpt());
+      place();
     });
     ySelect.addEventListener("change", () => {
-      yLabel.textContent = flat[parseInt(ySelect.value)].label;
+      yLabel.textContent = yOpt().label;
+      posY = optDefaultPos(yOpt());
+      place();
     });
+
+    const send = throttle(() => {
+      const xo = xOpt(), yo = yOpt();
+      const xr = optRange(xo), yr = optRange(yo);
+      const xv = posToValue(posX, xr.min, xr.max);
+      const yv = posToValue(posY, yr.min, yr.max);
+      for (const p of xo.paths) sendOSC(p, [xv]);
+      for (const p of yo.paths) sendOSC(p, [yv]);
+    }, SEND_THROTTLE_MS);
 
     let dragging = false;
 
     function setPosition(clientX, clientY) {
       const rect = pad.getBoundingClientRect();
-      let nx = (clientX - rect.left) / rect.width;
-      let ny = (clientY - rect.top) / rect.height;
-      nx = Math.min(1, Math.max(0, nx));
-      ny = Math.min(1, Math.max(0, ny));
-
-      crosshair.style.left = (nx * 100) + "%";
-      crosshair.style.top = (ny * 100) + "%";
-
-      const xOpt = flat[parseInt(xSelect.value)];
-      // Y axis inverted: top of pad = 1, bottom = 0 (typical synth convention)
-      const yVal = 1 - ny;
-      const yOpt = flat[parseInt(ySelect.value)];
-
-      for (const p of xOpt.paths) sendOSC(p, [nx]);
-      for (const p of yOpt.paths) sendOSC(p, [yVal]);
+      posX = clamp01((clientX - rect.left) / rect.width);
+      posY = 1 - clamp01((clientY - rect.top) / rect.height); // top = max
+      place();
+      send();
     }
 
     pad.addEventListener("pointerdown", (e) => {
@@ -602,13 +629,29 @@ function renderXYPads(section) {
       if (dragging) return; // don't fight the finger while it's on the pad
       const v = Number(args && args[0]);
       if (!Number.isFinite(v)) return;
-      const clamped = Math.max(0, Math.min(1, v));
-      if (flat[parseInt(xSelect.value)].paths.includes(path)) {
-        crosshair.style.left = (clamped * 100) + "%";
+      const xo = xOpt(), yo = yOpt();
+      if (xo.paths.includes(path)) {
+        const r = optRange(xo);
+        posX = valueToPos(v, r.min, r.max);
+        place();
       }
-      if (flat[parseInt(ySelect.value)].paths.includes(path)) {
-        crosshair.style.top = ((1 - clamped) * 100) + "%"; // Y inverted: top = 1
+      if (yo.paths.includes(path)) {
+        const r = optRange(yo);
+        posY = valueToPos(v, r.min, r.max);
+        place();
       }
+    });
+
+    // RESET: glide the crosshair back to the current options' defaults (UI
+    // only -- the bridge drives norns authoritatively during a reset).
+    resetters.push((ms) => {
+      const fromX = posX, fromY = posY;
+      const toX = optDefaultPos(xOpt()), toY = optDefaultPos(yOpt());
+      animate(ms, (e) => {
+        posX = fromX + (toX - fromX) * e;
+        posY = fromY + (toY - fromY) * e;
+        place();
+      });
     });
 
     wrap.appendChild(header);

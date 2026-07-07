@@ -1,0 +1,75 @@
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomy of the set for Dspm2">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#c7ecff"/><stop offset="0.42" stop-color="#d8f3ef"/>
+      <stop offset="0.72" stop-color="#e6f7cf"/><stop offset="1" stop-color="#cdeeb0"/>
+    </linearGradient>
+    <radialGradient id="topglow" cx="0.5" cy="-0.1" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.78"/>
+      <stop offset="0.48" stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.46"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="limebead" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3ffd6"/><stop offset="0.5" stop-color="#d6f29a"/>
+      <stop offset="0.51" stop-color="#b6e36a"/><stop offset="1" stop-color="#9fd64f"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3ffd6"/><stop offset="0.5" stop-color="#cdeb8e"/>
+      <stop offset="0.51" stop-color="#9fd64f"/><stop offset="1" stop-color="#6fc02f"/>
+    </linearGradient>
+    <linearGradient id="bardim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eafbff"/><stop offset="0.51" stop-color="#bfe6ff"/>
+      <stop offset="1" stop-color="#8fd0ea"/>
+    </linearGradient>
+    <radialGradient id="hero" cx="0.5" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#f3ffd6"/><stop offset="0.5" stop-color="#b6e36a"/>
+      <stop offset="1" stop-color="#6fc02f"/>
+    </radialGradient>
+    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fd64f" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#2bb3c0" stop-opacity="0.35"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="22" flood-color="#145070" flood-opacity="0.20"/>
+    </filter>
+    <filter id="softsm" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#145070" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#sky)"/>
+  <rect width="1080" height="1080" fill="url(#topglow)"/>
+  <g font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif">
+    <text x="90" y="150" font-size="40" font-weight="600" fill="#1f8a4c" letter-spacing="4">Dspm2</text>
+    <text x="90" y="232" font-size="76" font-weight="700" fill="#133b46">Anatomy of the set</text>
+    <text x="90" y="288" font-size="30" fill="#5a7884">Gesture density across 21 minutes — where the room leaned in.</text>
+    <rect x="90" y="330" width="900" height="630" rx="44" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.85" stroke-width="2" filter="url(#soft)"/>
+    <line x1="130" y1="780" x2="950" y2="780" stroke="#3a9d4e" stroke-opacity="0.4" stroke-width="2"/>
+    <path d="M130,780 L130,563 L149,780 L169,780 L188,780 L208,780 L227,780 L247,780 L266,780 L286,780 L305,780 L325,780 L344,780 L364,780 L383,777 L402,494 L422,656 L441,780 L461,651 L480,420 L500,662 L519,780 L539,736 L558,700 L578,780 L597,780 L617,780 L636,780 L656,780 L675,780 L694,780 L714,780 L733,780 L753,654 L772,606 L792,780 L811,780 L831,780 L850,780 L870,780 L889,780 L909,780 L928,780 L947,780 L950,780 Z" fill="url(#area)" stroke="#3a9d4e" stroke-opacity="0.6" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="480" cy="420" r="14" fill="#ffffff" stroke="#6fc02f" stroke-width="5"/>
+    <rect x="390" y="356" width="180" height="48" rx="24" fill="#ffffff" fill-opacity="0.92" stroke="#9fd64f" stroke-width="2"/>
+    <text x="480" y="388" text-anchor="middle" font-size="26" font-weight="700" fill="#1f5a2c">peak · 736</text>
+    <circle cx="130" cy="563" r="10" fill="#ffffff" stroke="#2bb3c0" stroke-width="4"/>
+    <text x="150" y="535" font-size="24" fill="#147a86">open · 444</text>
+    <circle cx="772" cy="606" r="10" fill="#ffffff" stroke="#2bb3c0" stroke-width="4"/>
+    <text x="940" y="582" text-anchor="end" font-size="24" fill="#147a86">finale · 356</text>
+    <g font-size="24" fill="#5a7884" text-anchor="middle">
+      <text x="130" y="822">0:00</text>
+      <text x="540" y="822">10:31</text>
+      <text x="950" y="822">21:03</text>
+    </g>
+    <g font-size="25" fill="#133b46">
+      <text x="130" y="888">▸ 0:19 — first recording (xj67mys…)</text>
+      <text x="600" y="888">▸ 9:00 — climax, 736 touches / 30s</text>
+      <text x="130" y="924">▸ 16:34 — last recording, bookend (xj67mys…)</text>
+      <text x="600" y="924">▸ 21:03 — end of take</text>
+    </g>
+  </g>
+</svg>

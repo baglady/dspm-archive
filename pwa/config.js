@@ -19,6 +19,20 @@ const ALL_AXIS_GROUPS = [
     { label: "PAN SLEW", paths: ["/barcode/pan_slew"] },
     { label: "LEVEL SLEW", paths: ["/barcode/level_slew"] },
   ]},
+  { group: "ALL VOICES", options: [
+    { label: "SWIRL L·R",   paths: ["/barcode/v1/pan","/barcode/v2/pan","/barcode/v3/pan",
+                                    "/barcode/v4/pan","/barcode/v5/pan","/barcode/v6/pan"] },
+    { label: "PITCH ALL",   paths: ["/barcode/v1/rate","/barcode/v2/rate","/barcode/v3/rate",
+                                    "/barcode/v4/rate","/barcode/v5/rate","/barcode/v6/rate"] },
+    { label: "LEVEL ALL",   paths: ["/barcode/v1/level","/barcode/v2/level","/barcode/v3/level",
+                                    "/barcode/v4/level","/barcode/v5/level","/barcode/v6/level"] },
+    { label: "WOBBLE ALL",  paths: ["/barcode/v1/pan_lfo","/barcode/v2/pan_lfo","/barcode/v3/pan_lfo",
+                                    "/barcode/v4/pan_lfo","/barcode/v5/pan_lfo","/barcode/v6/pan_lfo"] },
+    { label: "SHIMMER ALL", paths: ["/barcode/v1/rate_lfo","/barcode/v2/rate_lfo","/barcode/v3/rate_lfo",
+                                    "/barcode/v4/rate_lfo","/barcode/v5/rate_lfo","/barcode/v6/rate_lfo"] },
+    { label: "DRIFT ALL",   paths: ["/barcode/v1/direction_lfo","/barcode/v2/direction_lfo","/barcode/v3/direction_lfo",
+                                    "/barcode/v4/direction_lfo","/barcode/v5/direction_lfo","/barcode/v6/direction_lfo"] },
+  ]},
   { group: "VOICE 1", options: [
     { label: "V1 LEVEL", paths: ["/barcode/v1/level"] },
     { label: "V1 PAN", paths: ["/barcode/v1/pan"] },
@@ -100,6 +114,55 @@ const ALL_AXIS_GROUPS = [
 ];
 
 // ============================================================
+// AUDIENCE-SAFE AXIS MENU (for the pad dropdowns)
+// ------------------------------------------------------------
+// Same shape as ALL_AXIS_GROUPS but curated + RANGE-CLAMPED so no choice can
+// stop the audio. Every option carries min/max (the values sent at the two
+// ends of the axis) and a default used by RESET:
+//   * NO master / pre / rec level, NO per-voice level or level LFO
+//   * NO raw loop start/end (a zero-length window can choke a voice)
+//   * NO direction bias (can freeze a playhead); direction LFO is fine
+//   * filter floored at 0.35, resonance capped, pitch kept to 0.3..0.7
+// LFO options are PERIODS (norns maps 0..1 -> 1..50s); min>max on purpose so
+// pad-right/up = livelier, same trick as the MOVEMENT sliders.
+// ============================================================
+function _audienceVoiceGroup(i) {
+  const v = "/barcode/v" + i + "/";
+  return { group: "VOICE " + i, options: [
+    { label: "V" + i + " PAN",     paths: [v + "pan"],           min: 0.0,  max: 1.0,  default: 0.5  },
+    { label: "V" + i + " PITCH",   paths: [v + "rate"],          min: 0.3,  max: 0.7,  default: 0.5  },
+    { label: "V" + i + " WOBBLE",  paths: [v + "pan_lfo"],       min: 0.95, max: 0.10, default: 0.85 },
+    { label: "V" + i + " SHIMMER", paths: [v + "rate_lfo"],      min: 0.95, max: 0.25, default: 0.88 },
+    { label: "V" + i + " DRIFT",   paths: [v + "direction_lfo"], min: 0.95, max: 0.25, default: 0.90 },
+    { label: "V" + i + " WANDER",  paths: [v + "startend_lfo"],  min: 0.95, max: 0.25, default: 0.90 },
+  ]};
+}
+
+const _ALLV = (p) => ["/barcode/v1/","/barcode/v2/","/barcode/v3/",
+                      "/barcode/v4/","/barcode/v5/","/barcode/v6/"].map((v) => v + p);
+
+const AUDIENCE_AXIS_GROUPS = [
+  { group: "TONE", options: [
+    // left/bottom end floored at 0.35 so the filter never closes to silence
+    { label: "DARK · BRIGHT", paths: ["/param/filter_frequency"], min: 0.35, max: 1.0, default: 0.85 },
+    { label: "SPARKLE",       paths: ["/param/filter_reso"],      min: 0.0,  max: 0.5, default: 0.18 },
+    // slews = how smeary changes are (0..1 -> 0..30s); capped at 15s
+    { label: "GLIDE",         paths: ["/barcode/rate_slew"],      min: 0.0,  max: 0.5, default: 0.033 },
+    { label: "PAN GLIDE",     paths: ["/barcode/pan_slew"],       min: 0.0,  max: 0.5, default: 0.033 },
+  ]},
+  { group: "ALL VOICES", options: [
+    { label: "SWIRL L·R",     paths: _ALLV("pan"),           min: 0.0,  max: 1.0,  default: 0.5  },
+    { label: "PITCH ALL",     paths: _ALLV("rate"),          min: 0.3,  max: 0.7,  default: 0.5  },
+    { label: "WOBBLE ALL",    paths: _ALLV("pan_lfo"),       min: 0.95, max: 0.10, default: 0.85 },
+    { label: "SHIMMER ALL",   paths: _ALLV("rate_lfo"),      min: 0.95, max: 0.25, default: 0.88 },
+    { label: "DRIFT ALL",     paths: _ALLV("direction_lfo"), min: 0.95, max: 0.25, default: 0.90 },
+    { label: "WANDER ALL",    paths: _ALLV("startend_lfo"),  min: 0.95, max: 0.25, default: 0.90 },
+  ]},
+  _audienceVoiceGroup(1), _audienceVoiceGroup(2), _audienceVoiceGroup(3),
+  _audienceVoiceGroup(4), _audienceVoiceGroup(5), _audienceVoiceGroup(6),
+];
+
+// ============================================================
 // AUDIENCE CONFIG  (dspm3 — idiotproof build)
 // ------------------------------------------------------------
 // Deliberately limited so ANYONE — a kid, someone's grandparent — can play
@@ -114,55 +177,45 @@ const ALL_AXIS_GROUPS = [
 // ============================================================
 const CONFIG = {
 
-  // --- One safe, fun transport toggle ----------------------------------
+  // --- Safe, fun transport toggles --------------------------------------
   // RECORDING + CLEAR BUF are vibe-killers, so they're performer-only now.
+  // LFO SYNC (/param/quantize) just locks the wobbles together — can't hurt.
   buttons: {
     title: "PLAY",
     items: [
-      { label: "REVERSE", path: "/param/reverse", type: "toggle" },
+      { label: "REVERSE",  path: "/param/reverse",  type: "toggle" },
+      { label: "LFO SYNC", path: "/param/quantize", type: "toggle" },
     ],
   },
 
   // --- XY Pads (the main attraction) -----------------------------------
-  // locked:true  -> axes are fixed, no dropdowns. Each axis is range-limited
-  // via min/max (the value sent at the two ends) so even the corners stay
-  // musical. `default` is the resting value used by the RESET button.
+  // Dropdowns are back — but they only offer AUDIENCE_AXIS_GROUPS (curated,
+  // range-clamped, nothing that can stop the audio; see above). Each pad
+  // starts on the classic TONE / SWIRL axes.
   xyPads: {
     title: "TOUCH PADS",
     items: [
       {
         label: "TONE",
-        locked: true,
-        // left → right opens the filter; floored at 0.35 so it never mutes.
-        xAxis: { label: "DARK · BRIGHT", paths: ["/param/filter_frequency"],
-                 min: 0.35, max: 1.0, default: 0.85 },
-        // bottom → top adds sparkle; capped before it screams.
-        yAxis: { label: "SPARKLE", paths: ["/param/filter_reso"],
-                 min: 0.0, max: 0.5, default: 0.18 },
+        axisGroups: AUDIENCE_AXIS_GROUPS,
+        defaultXPath: "/param/filter_frequency",   // DARK · BRIGHT
+        defaultYPath: "/param/filter_reso",        // SPARKLE
       },
       {
         label: "SWIRL",
-        locked: true,
-        // left → right sweeps all six voices across the stereo field.
-        xAxis: { label: "LEFT · RIGHT",
-                 paths: ["/barcode/v1/pan","/barcode/v2/pan","/barcode/v3/pan",
-                         "/barcode/v4/pan","/barcode/v5/pan","/barcode/v6/pan"],
-                 min: 0.0, max: 1.0, default: 0.5 },
-        // bottom → top nudges pitch/speed of all voices together. Range kept
-        // narrow (0.3..0.7) so it colours the sound without derailing the groove.
-        yAxis: { label: "LOWER · HIGHER",
-                 paths: ["/barcode/v1/rate","/barcode/v2/rate","/barcode/v3/rate",
-                         "/barcode/v4/rate","/barcode/v5/rate","/barcode/v6/rate"],
-                 min: 0.3, max: 0.7, default: 0.5 },
+        axisGroups: AUDIENCE_AXIS_GROUPS,
+        defaultXPath: "/barcode/v1/pan",           // SWIRL L·R (all voices)
+        defaultYPath: "/barcode/v1/rate",          // PITCH ALL (all voices)
       },
     ],
   },
 
   // --- Movement sliders (pure motion, can't mute) ----------------------
-  // These set how lively the built-in pan / pitch wobble is. min>max on
-  // purpose: slider LEFT = calm (slow LFO), slider RIGHT = lively (fast LFO),
-  // so "drag right for more" reads intuitively. Capped so it stays a vibe,
-  // never a seizure.
+  // These set how lively the built-in pan / pitch / direction wobble is.
+  // min>max on purpose: slider LEFT = calm (slow LFO), slider RIGHT = lively
+  // (fast LFO), so "drag right for more" reads intuitively. Capped so it
+  // stays a vibe, never a seizure. GLIDE is the odd one out: it's rate slew
+  // (how smeary pitch changes are), left = tight, right = molasses.
   sliders: {
     title: "MOVEMENT",
     items: [
@@ -174,6 +227,13 @@ const CONFIG = {
         paths: ["/barcode/v1/rate_lfo","/barcode/v2/rate_lfo","/barcode/v3/rate_lfo",
                 "/barcode/v4/rate_lfo","/barcode/v5/rate_lfo","/barcode/v6/rate_lfo"],
         min: 0.95, max: 0.25, default: 0.88 },
+      { label: "DRIFT",
+        paths: ["/barcode/v1/direction_lfo","/barcode/v2/direction_lfo","/barcode/v3/direction_lfo",
+                "/barcode/v4/direction_lfo","/barcode/v5/direction_lfo","/barcode/v6/direction_lfo"],
+        min: 0.95, max: 0.25, default: 0.90 },
+      { label: "GLIDE",
+        paths: ["/barcode/rate_slew"],
+        min: 0.0, max: 0.5, default: 0.033 },
     ],
   },
 
