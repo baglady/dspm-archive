@@ -12,6 +12,13 @@ USB/folder ──► ingest ──► fingerprint DB + catalog.json
 recorded mix ──► identify ──► timeline.json ──► emit: .cue / snippets / video EDL / render-edl
 ```
 
+> **"Non-AI" is deliberate.** Identification must be exact and reproducible, so
+> it's pure DSP. The repo *does* have local AI — the offline Ollama assistant in
+> [`../tools/forest-ai/`](../tools/forest-ai/) — and the same division of labor
+> applies there: deterministic scripts do the facts, the model only narrates.
+> If you ever want prose around a timeline (set descriptions, captions), that's
+> the local-AI layer's job, not this tool's.
+
 ## Quick start
 
 ```bash

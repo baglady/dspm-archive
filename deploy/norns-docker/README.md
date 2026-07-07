@@ -129,6 +129,15 @@ arbitrary Lua, i.e. remote code execution on the LAN. maiden (`:5000`) and the
 screen (`:8889`) are also LAN-exposed. The tunnel only needs `:8081`; restrict
 the norns ports to loopback with an iptables/ufw rule.
 
+## Local AI
+
+The non-obvious facts on this page (the SUPERCOLLIDER-FAIL timing dance, the
+host-networking UDP reason, the :8002 icecast port) are exactly the kind of
+thing the repo's local AI assistant should know: keep them mirrored in
+[`../../tools/forest-ai/kb/`](../../tools/forest-ai/kb/README.md) so the offline
+Ollama assistant (`python tools/forest-ai/forest-ai.py`) can quote them when
+this box misbehaves and you're not near this README.
+
 ## Wanting real audio later
 
 Give the box a soundcard, then in `jackdrc` swap the dummy line for e.g.

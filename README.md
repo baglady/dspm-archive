@@ -129,7 +129,16 @@ SESSIONS_DIR=../sessions node server.js
 
 Open `http://<host>:4000`, pick a session, fill the form (validated against the metadata schema before writing `performance-metadata.json`), and optionally upload supplementary media. A `sessions/session_example/` bundle is included to try this before a real session exists.
 
+## Local AI (fully offline)
+
+The repo carries its own local AI — [Ollama](https://ollama.com/) running on the laptop with models on `D:\ollama\models` (`gemma3:4b` for general questions, `qwen2.5-coder:3b` for JSON work). No internet, no cloud API — it works in the woods.
+
+- **[tools/forest-ai/](tools/forest-ai/)** — the offline field assistant. `python tools/forest-ai/forest-ai.py` runs a live network scan (SSID, router/norns pings, bridge port), injects the rig knowledge base, and answers questions or auto-diagnoses the rig — it catches the #1 failure (laptop on the wrong Wi-Fi) reliably. Knowledge lives in plain markdown ([tools/forest-ai/kb/](tools/forest-ai/kb/README.md)); the model is disposable and swappable (`FOREST_MODEL` env, benchmarked by `eval-model.py`).
+- **`tools/forest-ai/session-infographic.py`** — regenerates the 4-slide session infographic offline from any `sessions/session_<ts>/` bundle. Stats and SVG geometry are deterministic from the logs; the local model only writes the caption lines.
+
 ## Troubleshooting
+
+No internet at the venue? Ask the local AI first: `python tools/forest-ai/forest-ai.py` scans the network and diagnoses most of the failures below by itself.
 
 - **Every HTTP request returns "Upgrade Required" (426).** A stale/old bridge process is still holding `:8081`, so the new one couldn't bind. Clear the orphans and relaunch: `pkill -f server.js` (Linux), then start again. `start.sh` launches by absolute path so its own cleanup `pkill` matches reliably.
 - **Phones can't reach the bridge.** Client isolation — common on *guest* networks. Use the main SSID, or the deliberately-allowed audience SSID in [docs/network-opal.md](docs/network-opal.md). On the venue LAN, phones must also turn off cellular/mobile data or the local page won't load.

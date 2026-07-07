@@ -55,6 +55,14 @@ trusting automation, confirm on your unit:
 - Timing is driven by the Live API beat position, not OT clock — keep Live as
   tempo master, or sync Live to the OT and the beat math still holds.
 
+## Local AI
+
+Once you've verified `TRACK_LEVEL_CC` / `TRACK_CHANNELS` on your unit (step 0),
+record them in the local AI's knowledge base
+([`../tools/forest-ai/kb/`](../tools/forest-ai/kb/README.md)) — the repo's
+offline Ollama assistant quotes verified facts like these verbatim, which beats
+re-deriving them from the OT manual at the venue.
+
 ## Prior art / references
 
 - Emil Smith, "It's Not Overbridge for the Octatrack, but It's Close Enough"

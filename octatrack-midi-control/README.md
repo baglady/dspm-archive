@@ -127,6 +127,15 @@ Each run writes `sessions/session_<ts>/` with `client_events.jsonl` (what client
 sent), `midi_cc.jsonl` (what went to the OT: channel, CC, value), and a
 `manifest.json` finalized with duration on `Ctrl-C`.
 
+## Local AI
+
+Rig trouble somewhere with no internet? The repo's offline assistant —
+[`../tools/forest-ai/`](../tools/forest-ai/), a local Ollama model
+(`gemma3:4b` on `D:\ollama`) over a markdown knowledge base — scans the network
+and troubleshoots the PWA→bridge→hardware chain. Gear facts like this project's
+CC map belong in its `kb/` as plain markdown so the model can quote them
+verbatim instead of improvising.
+
 ## Relation to the other Octatrack tool here
 
 [`../octatrack-stem-bouncer`](../octatrack-stem-bouncer) is a Max-for-Live device

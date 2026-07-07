@@ -79,3 +79,11 @@ what you want for multiple phones or remote/venue setups.
 | `AUTO_CHANNEL` | `14` | active-track channel |
 | `AGG` | `mean` | crowd aggregation: `mean` \| `last` |
 | `BRIDGE_ADMIN_TOKEN` | `''` | unset → `/admin` is loopback-only |
+
+## Local AI
+
+For offline troubleshooting of the whole rig (wrong Wi-Fi, dead bridge port,
+channel mismatches), ask the repo's local AI assistant:
+[`../tools/forest-ai/`](../tools/forest-ai/) — a local Ollama model over a
+markdown knowledge base, no internet needed. Add this project's channel/CC
+facts to its `kb/` so the model can quote them at the venue.

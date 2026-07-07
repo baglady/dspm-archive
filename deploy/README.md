@@ -94,3 +94,12 @@ The tick rate reported by `analyze-session.js` should hold ~25/s and read
 of the aggregation design. Ramp the client count up (`--clients 200 --ramp 10`)
 to find where *connections* start failing on a given host (the Pi Zero W will
 top out far sooner than a laptop).
+
+## Offline troubleshooting (local AI)
+
+When a profile misbehaves somewhere with no internet (profile 1 in the woods,
+especially), the local AI assistant diagnoses it on the spot:
+`python ../tools/forest-ai/forest-ai.py` — it scans the network (SSID, router
+and norns pings, bridge port, `NORNS_HOST`) and reasons over the rig knowledge
+base with a local Ollama model. Fully offline; see
+[../tools/forest-ai/kb/README.md](../tools/forest-ai/kb/README.md).

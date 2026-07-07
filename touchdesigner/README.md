@@ -102,3 +102,8 @@ they survive a rebuild.
   the Overbridge device isn't selected or Overbridge isn't running.
 - **Knobs do nothing:** the device isn't in the MIDI Device Mapper, or the perf
   channel in `MIDI/sel_knobs` doesn't match your unit.
+- **Offline at the venue:** the repo's local AI assistant
+  ([`../tools/forest-ai/`](../tools/forest-ai/), a local Ollama model over a
+  markdown knowledge base) can troubleshoot the network side — the bridge/OSC
+  leg this project listens to on port 7000 — with no internet. Put the device
+  hookup facts above into its `kb/` and it can talk you through the TD side too.

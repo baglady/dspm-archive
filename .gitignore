@@ -2,6 +2,7 @@ node_modules/
 *.log
 .DS_Store
 deploy/dspm-bridge.env
+telegram-bot/.env
 tunnel-qr.png
 
 # generated performance recordings (large media, regenerated on the box)
