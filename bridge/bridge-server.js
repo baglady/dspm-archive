@@ -800,6 +800,45 @@ const PERFORMER_LOGIN_HTML = `<!DOCTYPE html>
 </script>
 </body></html>`
 
+// ---- read-only repo doc serving (offline LAN hub) -------------------------
+// hub.html renders the project READMEs/docs and the status-board project list
+// straight off disk, so the whole rig is browsable on the travel router with no
+// internet. This serves text files from the repo, GET-only, read-only, and:
+//   - refuses any path segment that is '..', a dotfile (.git/.env), or
+//     node_modules -- so it can't walk out of the repo or leak secrets;
+//   - refuses anything outside a small text-only extension allowlist.
+// Same open-read posture as the archive endpoints; it cannot mutate anything.
+const REPO_ROOT = path.resolve(path.join(__dirname, '..'))
+const DOC_TYPES = {
+  '.md': 'text/markdown; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.lua': 'text/plain; charset=utf-8',
+  '.html': 'text/html; charset=utf-8', // lets hub.html link the status board
+  '.css': 'text/css; charset=utf-8',
+}
+function handleDoc(req, res, urlObj) {
+  if (req.method !== 'GET') { res.writeHead(405); return res.end('method not allowed') }
+  const rel = decodeURIComponent(urlObj.pathname.slice('/doc/'.length))
+  const segs = rel.split(/[/\\]+/).filter(Boolean)
+  if (segs.length === 0 ||
+      segs.some((s) => s === '..' || s.startsWith('.') || s === 'node_modules')) {
+    res.writeHead(403); return res.end('forbidden')
+  }
+  const ext = path.extname(rel).toLowerCase()
+  if (!DOC_TYPES[ext]) { res.writeHead(415); return res.end('unsupported type') }
+  const fp = path.resolve(path.join(REPO_ROOT, segs.join(path.sep)))
+  if (fp !== REPO_ROOT && !fp.startsWith(REPO_ROOT + path.sep)) {
+    res.writeHead(403); return res.end('forbidden')
+  }
+  fs.readFile(fp, (err, data) => {
+    if (err) { res.writeHead(404); return res.end('not found') }
+    res.writeHead(200, { 'Content-Type': DOC_TYPES[ext], 'Cache-Control': 'no-cache' })
+    res.end(data)
+  })
+}
+
 function handleRequest(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
@@ -813,6 +852,7 @@ function handleRequest(req, res) {
   }
   if (urlObj.pathname === '/admin/crowd') return handleAdmin(req, res, urlObj)
   if (urlObj.pathname.startsWith('/hook/')) return handleHook(req, res, urlObj)
+  if (urlObj.pathname.startsWith('/doc/')) return handleDoc(req, res, urlObj)
   if (urlObj.pathname.startsWith('/api/')) return handleApi(req, res, urlObj)
   if (urlObj.pathname === '/radio.mp3') return handleRadio(req, res)
   // Gate performer.html behind the admin token when one is configured.
@@ -841,7 +881,15 @@ wss.on('connection', (ws) => {
   // The cap sits well above a 60Hz pointer drag, so local phones never hit it;
   // excess messages are dropped silently rather than killing the connection.
   const bucket = makeBucket(MAX_MSGS_PER_SEC)
-  ws.send(JSON.stringify({ type: 'hello', channels: CHANNEL_NAMES }))
+  // Announce the full control surface. `discrete` lets a generic controller
+  // (params.html) know which channels are buttons vs sliders without hard-coding
+  // the barcode map -- so the same page auto-builds for any script the bridge
+  // exposes. Older clients (app.js) ignore hello entirely, so this is additive.
+  ws.send(JSON.stringify({
+    type: 'hello',
+    channels: CHANNEL_NAMES,
+    discrete: CHANNEL_NAMES.filter((c) => CHANNELS[c].discrete),
+  }))
 
   ws.on('message', (raw) => {
     if (!takeToken(bucket)) return

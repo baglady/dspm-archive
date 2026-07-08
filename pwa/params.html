@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>params // norns</title>
+<meta name="theme-color" content="#0a0a0c">
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --panel: #141418;
+    --line: #2a2a30;
+    --accent: #ff3b30;
+    --accent-dim: #5a1512;
+    --ok: #3ddc84;
+    --text: #e8e8ec;
+    --dim: #8a8a92;
+    --mono: 'Courier New', monospace;
+    --body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: var(--body); overscroll-behavior: none; touch-action: manipulation; }
+
+  header { padding: 14px 16px 10px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  header h1 { font-family: var(--mono); font-size: 17px; letter-spacing: 0.15em;
+    margin: 0; text-transform: uppercase; }
+  header h1 .bars { color: var(--accent); }
+  #status { font-size: 11px; color: var(--dim); font-family: var(--mono); white-space: nowrap; }
+  #status.connected { color: var(--ok); }
+  #status.failed { color: #ff5a5a; }
+
+  nav.page-nav { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--line); background: var(--panel); }
+  nav.page-nav a, nav.page-nav span { font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.15em; text-transform: uppercase; padding: 9px 14px;
+    text-decoration: none; color: var(--dim); }
+  nav.page-nav a:hover { color: var(--text); }
+  nav.page-nav .current { color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+  main { padding: 14px; display: flex; flex-direction: column; gap: 16px;
+    max-width: 820px; margin: 0 auto; }
+
+  section.group { background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; }
+  section.group h2 { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--dim); margin: 0 0 12px 0; }
+
+  .slider-block { margin-bottom: 14px; }
+  .slider-block:last-child { margin-bottom: 0; }
+  .slider-label { display: flex; justify-content: space-between; font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim);
+    margin-bottom: 5px; }
+  .slider-label .val { color: var(--accent); }
+
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 34px;
+    background: transparent; margin: 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--line); border-radius: 3px; }
+  input[type=range]::-moz-range-track { height: 6px; background: var(--line); border-radius: 3px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px;
+    border-radius: 50%; background: var(--accent); border: 2px solid #fff; margin-top: -10px; }
+  input[type=range]::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); border: 2px solid #fff; }
+
+  .btn-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
+  .btn { background: var(--bg); border: 1px solid var(--line); color: var(--text);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 15px 8px; border-radius: 6px; text-align: center; cursor: pointer; }
+  .btn.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+  .btn.pulse { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .reset-btn { width: 100%; background: var(--bg); border: 1px solid var(--line); color: var(--dim);
+    font-family: var(--mono); font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 16px 8px; border-radius: 8px; cursor: pointer; }
+  .reset-btn:active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+
+  .empty { color: var(--dim); font-family: var(--mono); font-size: 12px; text-align: center;
+    padding: 40px 16px; line-height: 1.6; }
+  footer { text-align: center; padding: 16px; font-family: var(--mono); font-size: 10px;
+    color: var(--dim); letter-spacing: 0.1em; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="bars">|||</span> PARAMS</h1>
+  <div id="status">connecting…</div>
+</header>
+
+<nav class="page-nav">
+  <span class="current">PARAMS</span>
+  <a href="hub.html">HUB</a>
+  <a href="index.html">AUDIENCE</a>
+  <a href="performer.html">PERFORMER →</a>
+  <a href="archive.html">ARCHIVE</a>
+</nav>
+
+<main id="app">
+  <div class="empty" id="empty">waiting for the bridge to announce its parameters…</div>
+</main>
+
+<footer>every parameter norns exposes · live · dspm</footer>
+
+<script>
+// ============================================================
+// params.html -- a flat, self-configuring control surface.
+//
+// Unlike index.html/performer.html (curated XY pads), this page builds ONE
+// control for EVERY channel the bridge announces in its `hello` message: a
+// slider per continuous param, a button per discrete one. Nothing about the
+// barcode script is hard-coded here, so the same page works unchanged for any
+// norns script the bridge is driving (the 7-script forest rig included) --
+// whatever channels the running bridge exposes are what you get.
+// ============================================================
+
+// ---- bridge WebSocket (same resolution order as the rest of the PWA) ------
+var qs = new URLSearchParams(location.search);
+var proto = location.protocol === "https:" ? "wss://" : "ws://";
+var BRIDGE_PORT = "8081";
+function resolveBridgeUrl() {
+  var override = qs.get("bridge");
+  if (override) return /^wss?:\/\//.test(override) ? override : proto + override;
+  if (location.pathname.includes("/proxy/")) {
+    return proto + location.host +
+      location.pathname.replace(/\/proxy\/\d+\/.*/, "/proxy/" + BRIDGE_PORT + "/");
+  }
+  var onStd = !location.port || location.port === "80" || location.port === "443";
+  return onStd ? proto + location.host : proto + location.hostname + ":" + BRIDGE_PORT;
+}
+var bridgeUrl = resolveBridgeUrl();
+var ws = null;
+
+// ---- label / group derivation from an OSC path ----------------------------
+// "/barcode/v3/rate_lfo" -> {group:"VOICE 3", label:"RATE LFO"}
+// "/param/filter_frequency" -> {group:"GLOBAL", label:"FILTER FREQUENCY"}
+function humanize(s) { return s.replace(/[\/_]+/g, " ").trim().toUpperCase(); }
+function describe(path) {
+  var p = path.replace(/^\/(barcode|param)\//, "");
+  var m = p.match(/^v(\d+)\/(.+)$/);
+  if (m) return { group: "VOICE " + m[1], order: parseInt(m[1], 10), label: humanize(m[2]) };
+  return { group: "GLOBAL", order: -1, label: humanize(p) };
+}
+
+// ---- state ----------------------------------------------------------------
+var controls = {};        // path -> { el, kind, meta }
+var discreteSet = {};     // path -> true
+var lastLocal = {};       // path -> ts of last local edit (suppress feedback echo)
+var app = document.getElementById("app");
+var emptyEl = document.getElementById("empty");
+
+function send(path, value) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ channel: path, value: value }));
+  }
+}
+
+// ---- build the UI from the announced channel list -------------------------
+function build(channels, discrete) {
+  (discrete || []).forEach(function (c) { discreteSet[c] = true; });
+  // heuristic fallback if an older bridge didn't send `discrete`
+  if (!discrete) {
+    channels.forEach(function (c) {
+      if (/(recording|clear|reverse|quantize|record|reset|toggle|trig|gate)$/.test(c)) discreteSet[c] = true;
+    });
+  }
+
+  if (emptyEl) emptyEl.remove();
+  app.textContent = "";
+
+  // group channels, preserving GLOBAL first then VOICE 1..n
+  var groups = {};
+  channels.forEach(function (path) {
+    var d = describe(path);
+    (groups[d.group] = groups[d.group] || { order: d.order, items: [] }).items.push({ path: path, d: d });
+  });
+  var names = Object.keys(groups).sort(function (a, b) { return groups[a].order - groups[b].order; });
+
+  names.forEach(function (name) {
+    var sec = document.createElement("section");
+    sec.className = "group";
+    var h = document.createElement("h2"); h.textContent = name; sec.appendChild(h);
+
+    // discrete buttons for this group get collected into one row
+    var btnRow = null;
+    groups[name].items.forEach(function (it) {
+      if (discreteSet[it.path]) {
+        if (!btnRow) { btnRow = document.createElement("div"); btnRow.className = "btn-row"; }
+        btnRow.appendChild(makeButton(it.path, it.d.label));
+      }
+    });
+    if (btnRow) sec.appendChild(btnRow);
+
+    groups[name].items.forEach(function (it) {
+      if (!discreteSet[it.path]) sec.appendChild(makeSlider(it.path, it.d.label));
+    });
+    app.appendChild(sec);
+  });
+
+  // gentle full-patch RESET (bridge ramps norns back to its known-good baseline)
+  var rsec = document.createElement("section"); rsec.className = "group";
+  var rb = document.createElement("button"); rb.className = "reset-btn"; rb.textContent = "RESET";
+  rb.addEventListener("click", function () {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "reset" }));
+  });
+  rsec.appendChild(rb); app.appendChild(rsec);
+}
+
+function makeSlider(path, label) {
+  var block = document.createElement("div"); block.className = "slider-block";
+  var lab = document.createElement("div"); lab.className = "slider-label";
+  var name = document.createElement("span"); name.textContent = label;
+  var val = document.createElement("span"); val.className = "val"; val.textContent = "0.50";
+  lab.appendChild(name); lab.appendChild(val);
+  var input = document.createElement("input");
+  input.type = "range"; input.min = "0"; input.max = "1"; input.step = "0.001"; input.value = "0.5";
+  input.addEventListener("input", function () {
+    var v = Number(input.value);
+    val.textContent = v.toFixed(2);
+    lastLocal[path] = Date.now();
+    send(path, v);
+  });
+  block.appendChild(lab); block.appendChild(input);
+  controls[path] = { kind: "slider", input: input, val: val };
+  return block;
+}
+
+function makeButton(path, label) {
+  var b = document.createElement("button"); b.className = "btn"; b.textContent = label;
+  // toggles: recording/reverse/quantize latch; everything else fires a 1 pulse.
+  var latching = /(recording|reverse|quantize)$/.test(path);
+  b.addEventListener("click", function () {
+    lastLocal[path] = Date.now();
+    if (latching) {
+      var on = !b.classList.contains("active");
+      b.classList.toggle("active", on);
+      send(path, on ? 1 : 0);
+    } else {
+      b.classList.add("pulse");
+      setTimeout(function () { b.classList.remove("pulse"); }, 140);
+      send(path, 1);
+    }
+  });
+  controls[path] = { kind: "button", el: b, latching: latching };
+  return b;
+}
+
+// ---- feedback from norns / other phones -----------------------------------
+// The bridge fans out {path, args:[v]} whenever a param changes on the device
+// or another controller moves it. Track the control unless we JUST moved it
+// ourselves (avoid the slider fighting the finger).
+function applyFeedback(path, v) {
+  var c = controls[path];
+  if (!c) return;
+  if (Date.now() - (lastLocal[path] || 0) < 500) return;
+  if (c.kind === "slider") {
+    c.input.value = String(v);
+    c.val.textContent = Number(v).toFixed(2);
+  } else if (c.latching) {
+    c.el.classList.toggle("active", Number(v) >= 0.5);
+  }
+}
+
+// ---- connection -----------------------------------------------------------
+var statusEl = document.getElementById("status");
+function setStatus(txt, cls) { statusEl.textContent = txt; statusEl.className = cls || ""; }
+
+function connect() {
+  try { ws = new WebSocket(bridgeUrl); }
+  catch (e) { setStatus("bad address", "failed"); return; }
+  ws.onopen = function () { setStatus("connected", "connected"); };
+  ws.onclose = function () { setStatus("reconnecting…", "failed"); setTimeout(connect, 1500); };
+  ws.onerror = function () { setStatus("not connected", "failed"); };
+  ws.onmessage = function (ev) {
+    var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+    if (!msg) return;
+    if (msg.type === "hello") { build(msg.channels || [], msg.discrete); return; }
+    if (msg.path && msg.args) { applyFeedback(msg.path, Number(msg.args[0])); return; }
+  };
+}
+connect();
+</script>
+</body>
+</html>

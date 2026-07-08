@@ -24,15 +24,20 @@ window.PROJECTS = [
     name: "Bridge + audience/performer PWA",
     area: "show-rig",
     stage: "live",
-    updated: "2026-07-01",
+    updated: "2026-07-07",
     tested: [
       "dspm2 + dspm3 real shows",
       "phone → WS → OSC → norns end to end",
       "feedback return leg (:10112)",
       "admin-token gating on mutating /api",
+      "params.html flat controller (slider → bridge tick verified local, 2026-07-07)",
+      "hub.html LAN hub (projects + doc reader verified local, 2026-07-07)",
     ],
-    untested: [],
-    note: "The heart of everything. dspm3 audience build is locked-down idiotproof; performer.html keeps full control.",
+    untested: [
+      "params.html against the physical norns",
+      "hub.html on the GL router from a phone",
+    ],
+    note: "The heart of everything. dspm3 audience build is locked-down idiotproof; performer.html keeps full control. NEW: params.html (every param, flat) + hub.html (offline LAN dashboard, /doc/ readme reader).",
     links: ["bridge/", "pwa/"],
   },
   {

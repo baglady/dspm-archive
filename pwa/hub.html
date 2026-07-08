@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dspm — LAN hub</title>
+<meta name="theme-color" content="#ffffff">
+<style>
+/* Same look as dash.hetti.be (pwa/dashboard.html) -- but every link here is
+   same-origin or laptop-port, so the whole page works on the travel router
+   with NO internet. dashboard.html stays the internet twin. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #fff; color: #111; min-height: 100vh; padding: 2rem 1.5rem 4rem; max-width: 960px; margin: 0 auto; }
+header { margin-bottom: 1.2rem; }
+h1 { font-size: 1rem; font-weight: 400; color: #aaa; }
+h1 strong { color: #111; font-weight: 500; }
+.hostline { font-size: 0.7rem; color: #bbb; margin-top: 4px; font-family: monospace; }
+.norns-bar { background: #f5f5f5; border: 0.5px solid #e0e0e0; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 2.2rem; flex-wrap: wrap; }
+.norns-bar-label { font-size: 0.78rem; color: #666; white-space: nowrap; }
+.norns-bar audio { flex: 1; height: 28px; min-width: 180px; }
+.section { margin-bottom: 2.5rem; }
+.section-label { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #bbb; margin-bottom: 0.6rem; padding-bottom: 0.5rem; border-bottom: 0.5px solid #eee; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+a.card, div.card { display: block; background: #fafafa; border: 0.5px solid #e8e8e8; border-radius: 8px; padding: 11px 14px; text-decoration: none; color: inherit; transition: background 0.12s, border-color 0.12s; cursor: pointer; }
+a.card:hover, div.card.clickable:hover { background: #f0f0f0; border-color: #d0d0d0; }
+.card-name { font-size: 0.82rem; font-weight: 500; color: #111; display: block; }
+.card-url { font-size: 0.65rem; color: #bbb; display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
+.card-desc { font-size: 0.68rem; color: #999; display: block; margin-top: 3px; line-height: 1.35; }
+.tags { margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap; }
+.tag { display: inline-block; font-size: 0.58rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 5px; border-radius: 3px; border: 0.5px solid #ddd; background: #f0f0f0; color: #888; }
+.tag-port { font-family: monospace; letter-spacing: 0; }
+.tag-doc { background: #eef4fb; color: #33689e; border-color: #b9d2ea; }
+/* project stage colours (match tools/status-board vocabulary) */
+.tag-idea          { background: #f0f0f0; color: #999; }
+.tag-building      { background: #eef4fb; color: #33689e; border-color: #b9d2ea; }
+.tag-needs-testing { background: #fff8e0; color: #b07800; border-color: #f0d060; }
+.tag-tested        { background: #edfaed; color: #2a7a2a; border-color: #b0ddb0; }
+.tag-live          { background: #e6f8f0; color: #0a7a4d; border-color: #8fd8b8; }
+.tag-parked        { background: #f5eef5; color: #96639a; border-color: #dcc2de; }
+.checks { font-size: 0.62rem; color: #999; margin-top: 4px; font-family: monospace; }
+/* doc reader overlay */
+#reader { display: none; position: fixed; inset: 0; background: rgba(15,15,18,0.45); z-index: 50; padding: 4vh 4vw; }
+#reader.open { display: block; }
+#reader-inner { background: #fff; border-radius: 12px; max-width: 780px; margin: 0 auto; height: 92vh; display: flex; flex-direction: column; box-shadow: 0 12px 60px rgba(0,0,0,0.3); }
+#reader-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 0.5px solid #eee; }
+#reader-title { font-size: 0.8rem; font-weight: 500; font-family: monospace; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#reader-close { background: none; border: 0.5px solid #ddd; border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 0.75rem; color: #888; }
+#reader-body { overflow-y: auto; padding: 20px 26px 40px; font-size: 0.86rem; line-height: 1.55; }
+#reader-body h1, #reader-body h2, #reader-body h3 { margin: 1.2em 0 0.45em; line-height: 1.25; }
+#reader-body h1 { font-size: 1.25rem; } #reader-body h2 { font-size: 1.05rem; } #reader-body h3 { font-size: 0.92rem; }
+#reader-body p { margin: 0.55em 0; }
+#reader-body ul, #reader-body ol { margin: 0.55em 0 0.55em 1.4em; }
+#reader-body li { margin: 0.2em 0; }
+#reader-body code { font-family: ui-monospace, monospace; font-size: 0.78rem; background: #f4f4f4; border-radius: 4px; padding: 1px 5px; }
+#reader-body pre { background: #f7f7f8; border: 0.5px solid #eee; border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 0.7em 0; }
+#reader-body pre code { background: none; padding: 0; }
+#reader-body a { color: #33689e; }
+#reader-body blockquote { border-left: 3px solid #ddd; margin: 0.6em 0; padding: 2px 0 2px 12px; color: #777; }
+#reader-body table { border-collapse: collapse; margin: 0.7em 0; font-size: 0.78rem; }
+#reader-body th, #reader-body td { border: 0.5px solid #ddd; padding: 4px 9px; text-align: left; }
+</style>
+</head>
+<body>
+<header>
+  <h1>dspm / <strong>LAN hub</strong> — everything, no internet needed</h1>
+  <div class="hostline" id="hostline"></div>
+</header>
+
+<div class="norns-bar">
+  <span class="norns-bar-label">norns radio (LAN)</span>
+  <audio controls preload="none" src="radio.mp3"></audio>
+</div>
+
+<div class="section">
+  <div class="section-label">control — this bridge</div>
+  <div class="grid" id="grid-bridge"></div>
+</div>
+
+<div class="section">
+  <div class="section-label">control — other bridges on this laptop</div>
+  <div class="grid" id="grid-laptop"></div>
+</div>
+
+<div class="section">
+  <div class="section-label">readmes &amp; runbooks — read them right here</div>
+  <div class="grid" id="grid-docs"></div>
+</div>
+
+<div class="section">
+  <div class="section-label">projects — from the status board <a href="doc/tools/status-board/index.html" style="font-size:inherit;color:#33689e;text-decoration:none;">(full board →)</a></div>
+  <div id="projects"></div>
+</div>
+
+<div id="reader">
+  <div id="reader-inner">
+    <div id="reader-head">
+      <span id="reader-title"></span>
+      <button id="reader-close">close</button>
+    </div>
+    <div id="reader-body"></div>
+  </div>
+</div>
+
+<!-- the status board's hand-edited project list IS the source of truth;
+     served read-only through the bridge's /doc/ route so this page and the
+     board can never drift apart. -->
+<script src="doc/tools/status-board/projects.js"></script>
+<script>
+document.getElementById('hostline').textContent =
+  'served by the bridge at ' + location.host + ' · phones: join the GL router Wi-Fi, open this same address';
+
+// ---- controllers on THIS bridge (same origin -> always works on the LAN) --
+var BRIDGE_PAGES = [
+  { name: 'params',        href: 'params.html',    desc: 'every norns parameter, one flat page' },
+  { name: 'audience PWA',  href: 'index.html',     desc: 'locked-down XY pads for the crowd' },
+  { name: 'performer',     href: 'performer.html', desc: 'full control surface, token-gated' },
+  { name: 'archive',       href: 'archive.html',   desc: 'session recordings + playback' },
+  { name: 'guests',        href: 'guests.html',    desc: 'phone join instructions' },
+  { name: 'launch',        href: 'launch.html',    desc: 'system startup checklist' },
+  { name: 'dashboard (internet twin)', href: 'dashboard.html', desc: 'dash.hetti.be — dead in the woods by design' },
+];
+var gb = document.getElementById('grid-bridge');
+BRIDGE_PAGES.forEach(function (p) {
+  var a = document.createElement('a');
+  a.className = 'card'; a.href = p.href;
+  a.innerHTML = '<span class="card-name"></span><span class="card-url"></span><span class="card-desc"></span>';
+  a.querySelector('.card-name').textContent = p.name;
+  a.querySelector('.card-url').textContent = location.host + '/' + p.href;
+  a.querySelector('.card-desc').textContent = p.desc;
+  gb.appendChild(a);
+});
+
+// ---- other control bridges on this same laptop (different ports) ----------
+// Links are built from location.hostname so they follow the laptop wherever it
+// is (192.168.8.x on the GL router, 10.0.0.x at home). They only work when
+// that bridge is actually running, so each card says how to start it.
+var LAPTOP_APPS = [
+  { name: 'octatrack control', port: 8082, desc: 'PWA → WS → MIDI CC surface', start: 'octatrack-midi-control/' },
+  { name: 'mbase01 control',   port: 8083, desc: '12-knob Jomox MBase 01',     start: 'mbase01-bridge/' },
+  { name: 'analog rytm control', port: 8084, desc: 'PWA → WS → MIDI CC surface (MKI)', start: 'analog-rytm-control/' },
+  { name: '7-script play-along rig', port: 8081, host: null, desc: 'barcode/oooooo/passersby/molly/awake/cranes/mangl — run ../dspm-playalong-v2 INSTEAD of this bridge (same port)', start: '../dspm-playalong-v2/' },
+];
+var gl = document.getElementById('grid-laptop');
+LAPTOP_APPS.forEach(function (p) {
+  var a = document.createElement('a');
+  a.className = 'card';
+  a.href = 'http://' + location.hostname + ':' + p.port + '/';
+  a.innerHTML = '<span class="card-name"></span><span class="card-url"></span><span class="card-desc"></span>' +
+    '<div class="tags"><span class="tag tag-port"></span><span class="tag start"></span></div>';
+  a.querySelector('.card-name').textContent = p.name;
+  a.querySelector('.card-url').textContent = location.hostname + ':' + p.port;
+  a.querySelector('.card-desc').textContent = p.desc;
+  a.querySelector('.tag-port').textContent = ':' + p.port;
+  a.querySelector('.tag.start').textContent = p.start;
+  gl.appendChild(a);
+});
+
+// ---- readmes & runbooks (served read-only via the bridge /doc/ route) -----
+var DOCS = [
+  { path: 'README.md',                 desc: 'the whole system, top to bottom' },
+  { path: 'WOODS-CHECKLIST.md',        desc: 'pre-departure gate — do not skip' },
+  { path: 'RUNBOOK-LAN.md',            desc: 'LAN-only show, step by step' },
+  { path: 'VENUE-REPEATER-SETUP.md',   desc: 'GL router repeater mode' },
+  { path: 'DEPLOY-DEBIAN.md',          desc: 'babayaga + Cloudflare tunnel' },
+  { path: 'docs/PLAN-woods-radio.md',  desc: 'icecast+darkice on the physical norns' },
+  { path: 'docs/venue-setup.md',       desc: 'venue network setup' },
+  { path: 'docs/bridge-design.md',     desc: 'why the bridge works the way it does' },
+  { path: 'docs/control-surface-mapping.md', desc: 'OSC paths ↔ controls' },
+  { path: 'docs/feedback.md',          desc: 'norns → phones feedback leg' },
+  { path: 'docs/remote-webhooks.md',   desc: '/hook + /admin remote control' },
+  { path: 'docs/network-opal.md',      desc: 'Opal network notes' },
+  { path: 'tools/forest-ai/rig-knowledge.md', desc: 'forest AI: what it knows about the rig' },
+  { path: 'tools/forest-ai/kb/procedures/test-the-rig.md',   desc: 'forest AI: test procedure' },
+  { path: 'tools/forest-ai/kb/procedures/edit-controls-offline.md', desc: 'forest AI: edit controls offline' },
+  { path: 'tools/forest-ai/kb/procedures/inject-osc-into-a-norns-script.md', desc: 'forest AI: add OSC to a script' },
+];
+var gd = document.getElementById('grid-docs');
+DOCS.forEach(function (d) {
+  var el = document.createElement('div');
+  el.className = 'card clickable';
+  el.innerHTML = '<span class="card-name"></span><span class="card-url"></span><span class="card-desc"></span>';
+  el.querySelector('.card-name').textContent = d.path.split('/').pop().replace(/\.md$/, '');
+  el.querySelector('.card-url').textContent = d.path;
+  el.querySelector('.card-desc').textContent = d.desc;
+  el.addEventListener('click', function () { openDoc(d.path); });
+  gd.appendChild(el);
+});
+
+// ---- projects (window.PROJECTS from the status board) ----------------------
+var AREA_LABELS = {
+  'show-rig': 'show rig', 'norns': 'norns / audio', 'midi-gear': 'midi gear',
+  'visuals': 'visuals', 'ai-tools': 'ai tools', 'infra': 'infra / deploy',
+  'skills': 'reusable skills', 'audio-tools': 'audio tools',
+};
+var wrap = document.getElementById('projects');
+var byArea = {};
+(window.PROJECTS || []).forEach(function (p) { (byArea[p.area] = byArea[p.area] || []).push(p); });
+Object.keys(byArea).forEach(function (area) {
+  var sec = document.createElement('div'); sec.className = 'section';
+  var lab = document.createElement('div'); lab.className = 'section-label';
+  lab.textContent = AREA_LABELS[area] || area;
+  sec.appendChild(lab);
+  var grid = document.createElement('div'); grid.className = 'grid';
+  byArea[area].forEach(function (p) {
+    var mdLink = (p.links || []).find(function (l) { return /\.md$/i.test(l) && !/^\.\./.test(l); });
+    var el = document.createElement('div');
+    el.className = 'card' + (mdLink ? ' clickable' : '');
+    el.innerHTML = '<span class="card-name"></span><span class="card-desc"></span>' +
+      '<div class="checks"></div><div class="tags"></div>';
+    el.querySelector('.card-name').textContent = p.name;
+    el.querySelector('.card-desc').textContent = p.note || '';
+    el.querySelector('.checks').textContent =
+      '✅ ' + (p.tested || []).length + '  ⬜ ' + (p.untested || []).length + '  · ' + (p.updated || '');
+    var tags = el.querySelector('.tags');
+    var st = document.createElement('span'); st.className = 'tag tag-' + p.stage; st.textContent = p.stage;
+    tags.appendChild(st);
+    if (mdLink) {
+      var dt = document.createElement('span'); dt.className = 'tag tag-doc'; dt.textContent = 'readme';
+      tags.appendChild(dt);
+      el.addEventListener('click', function () { openDoc(mdLink); });
+    } else if ((p.links || [])[0]) {
+      var lt = document.createElement('span'); lt.className = 'tag'; lt.textContent = p.links[0];
+      tags.appendChild(lt);
+    }
+    grid.appendChild(el);
+  });
+  sec.appendChild(grid);
+  wrap.appendChild(sec);
+});
+
+// ---- tiny markdown reader ---------------------------------------------------
+// Good enough for the repo's own docs: headings, fences, inline code, bold/
+// italic, links, lists, blockquotes, tables, hr. Everything is built through
+// escaped text first, so doc content can't inject markup.
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function inline(s) {
+  s = esc(s);
+  s = s.replace(/`([^`]+)`/g, function (_, c) { return '<code>' + c + '</code>'; });
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, t, h) {
+    if (/\.md$/i.test(h) && !/^https?:/i.test(h)) return '<a href="#" data-doc="' + h + '">' + t + '</a>';
+    return '<a href="' + h + '" target="_blank" rel="noopener">' + t + '</a>';
+  });
+  return s;
+}
+function renderMd(md) {
+  var lines = md.split(/\r?\n/), out = [], i = 0;
+  while (i < lines.length) {
+    var l = lines[i];
+    if (/^```/.test(l)) {
+      var code = []; i++;
+      while (i < lines.length && !/^```/.test(lines[i])) code.push(lines[i++]);
+      i++; out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>'); continue;
+    }
+    var h = l.match(/^(#{1,3})\s+(.*)/);
+    if (h) { out.push('<h' + h[1].length + '>' + inline(h[2]) + '</h' + h[1].length + '>'); i++; continue; }
+    if (/^\s*([-*+]|\d+\.)\s+/.test(l)) {
+      var ordered = /^\s*\d+\./.test(l), items = [];
+      while (i < lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i]))
+        items.push('<li>' + inline(lines[i++].replace(/^\s*([-*+]|\d+\.)\s+/, '')) + '</li>');
+      out.push((ordered ? '<ol>' : '<ul>') + items.join('') + (ordered ? '</ol>' : '</ul>')); continue;
+    }
+    if (/^\s*>/.test(l)) {
+      var q = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) q.push(inline(lines[i++].replace(/^\s*>\s?/, '')));
+      out.push('<blockquote>' + q.join('<br>') + '</blockquote>'); continue;
+    }
+    if (/^\|.*\|\s*$/.test(l)) {
+      var rows = [];
+      while (i < lines.length && /^\|.*\|\s*$/.test(lines[i])) rows.push(lines[i++]);
+      var html = rows.filter(function (r) { return !/^\|[\s:|-]+\|\s*$/.test(r); })
+        .map(function (r, ri) {
+          var tag = ri === 0 ? 'th' : 'td';
+          return '<tr>' + r.replace(/^\||\|\s*$/g, '').split('|')
+            .map(function (c) { return '<' + tag + '>' + inline(c.trim()) + '</' + tag + '>'; }).join('') + '</tr>';
+        }).join('');
+      out.push('<table>' + html + '</table>'); continue;
+    }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)) { out.push('<hr>'); i++; continue; }
+    if (l.trim() === '') { i++; continue; }
+    var para = [];
+    while (i < lines.length && lines[i].trim() !== '' &&
+           !/^(#{1,3}\s|```|\s*([-*+]|\d+\.)\s|\s*>|\|.*\|\s*$)/.test(lines[i])) para.push(lines[i++]);
+    out.push('<p>' + inline(para.join(' ')) + '</p>');
+  }
+  return out.join('\n');
+}
+
+var reader = document.getElementById('reader');
+var readerBody = document.getElementById('reader-body');
+var readerTitle = document.getElementById('reader-title');
+function openDoc(relPath) {
+  relPath = relPath.replace(/^\.\//, '');
+  readerTitle.textContent = relPath;
+  readerBody.innerHTML = '<p style="color:#aaa">loading…</p>';
+  reader.classList.add('open');
+  fetch('doc/' + relPath).then(function (r) {
+    if (!r.ok) throw new Error(r.status);
+    return r.text();
+  }).then(function (md) {
+    readerBody.innerHTML = renderMd(md);
+    readerBody.scrollTop = 0;
+  }).catch(function (e) {
+    readerBody.innerHTML = '<p style="color:#b00">could not load ' + esc(relPath) + ' (' + esc(String(e.message || e)) + ')</p>';
+  });
+}
+// relative .md links inside a doc open in the same reader
+readerBody.addEventListener('click', function (ev) {
+  var a = ev.target.closest('a[data-doc]');
+  if (!a) return;
+  ev.preventDefault();
+  var base = readerTitle.textContent.split('/').slice(0, -1);
+  var target = a.getAttribute('data-doc').split('/');
+  target.forEach(function (seg) {
+    if (seg === '..') base.pop(); else if (seg !== '.') base.push(seg);
+  });
+  openDoc(base.join('/'));
+});
+document.getElementById('reader-close').addEventListener('click', function () { reader.classList.remove('open'); });
+reader.addEventListener('click', function (ev) { if (ev.target === reader) reader.classList.remove('open'); });
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') reader.classList.remove('open'); });
+</script>
+</body>
+</html>
