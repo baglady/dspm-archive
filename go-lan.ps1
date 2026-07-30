@@ -79,6 +79,7 @@ Write-Host ("   AUDIENCE :  http://{0}:8081/" -f $ip) -ForegroundColor Green
 Write-Host ("   PERFORMER:  http://{0}:8081/performer.html?token=dspm" -f $ip) -ForegroundColor Yellow
 Write-Host ("   PARAMS   :  http://{0}:8081/params.html   (every norns parameter, flat)" -f $ip) -ForegroundColor Yellow
 Write-Host ("   LAN HUB  :  http://{0}:8081/hub.html      (all controllers + readmes, offline)" -f $ip) -ForegroundColor Cyan
+Write-Host ("   BOARD    :  http://{0}:8081/board         (status board on its own)" -f $ip) -ForegroundColor Cyan
 Write-Host "====================================================================================" -ForegroundColor Green
 Write-Host ""
 

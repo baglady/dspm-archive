@@ -850,6 +850,15 @@ function handleRequest(req, res) {
     req.url = '/dashboard.html'
     return serveStatic(req, res)
   }
+  // Typeable shortcut to the status board, for reading it off a phone at a
+  // venue. This REDIRECTS rather than rewriting on purpose: the board loads its
+  // projects.js as a relative path, so the browser's base URL has to be the
+  // board's own folder or the data never loads. Redirecting also keeps
+  // tools/status-board/ the single source of truth -- no copy in pwa/ to drift.
+  if (urlObj.pathname === '/board' || urlObj.pathname === '/board/') {
+    res.writeHead(302, { Location: '/doc/tools/status-board/index.html' })
+    return res.end()
+  }
   if (urlObj.pathname === '/admin/crowd') return handleAdmin(req, res, urlObj)
   if (urlObj.pathname.startsWith('/hook/')) return handleHook(req, res, urlObj)
   if (urlObj.pathname.startsWith('/doc/')) return handleDoc(req, res, urlObj)
